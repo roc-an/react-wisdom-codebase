@@ -27,6 +27,7 @@ if (__DEV__) {
   didWarnAboutStringRefs = {};
 }
 
+// 判断 config 中是否有有效的 ref，return boolean
 function hasValidRef(config) {
   if (__DEV__) {
     if (hasOwnProperty.call(config, 'ref')) {
@@ -39,6 +40,7 @@ function hasValidRef(config) {
   return config.ref !== undefined;
 }
 
+// 判断 config 中是否有有效的 key，return boolean
 function hasValidKey(config) {
   if (__DEV__) {
     if (hasOwnProperty.call(config, 'key')) {
@@ -357,6 +359,11 @@ export function jsxDEV(type, config, maybeKey, source, self) {
 /**
  * Create and return a new ReactElement of the given type.
  * See https://reactjs.org/docs/react-api.html#createelement
+ * 根据给定的 type 创建并 return 一个新的 ReactElement
+ * @param type: ReactElement 类型，可以是标签名字符串（如 'div'、'span'），React component 类型（一个 class 或 function），
+ *   或是 React fragment 类型
+ * @param config: 创建 ReactElement 的配置项，主要是 ReactElement 的属性，以键值对形式存在这个对象里
+ * @param children: 要创建的 ReactElement 的子节点，可以是 1 或多个，会通过 arguments 取到
  */
 export function createElement(type, config, children) {
   let propName;
@@ -369,6 +376,7 @@ export function createElement(type, config, children) {
   let self = null;
   let source = null;
 
+  // 判断 config 中否有有效的 ref 和 key，并赋值给变量
   if (config != null) {
     if (hasValidRef(config)) {
       ref = config.ref;
@@ -387,6 +395,8 @@ export function createElement(type, config, children) {
     self = config.__self === undefined ? null : config.__self;
     source = config.__source === undefined ? null : config.__source;
     // Remaining properties are added to a new props object
+    // 除了内置属性（也就是 RESERVED_PROPS 中的 key, ref, __self, __source，这些是框架处理 ReactElement 而内置的，
+    // 并不是我们写应用时在 React 组件上定义的 props），剩余的都添加到 props 这个对象
     for (propName in config) {
       if (
         hasOwnProperty.call(config, propName) &&
@@ -399,6 +409,8 @@ export function createElement(type, config, children) {
 
   // Children can be more than one argument, and those are transferred onto
   // the newly allocated props object.
+  // Children 可以是 1 或多个，createElement 函数的第 3 个及以后的参数都作为子节点
+  // 通过 arguments 判断、处理后，props.children 是一个节点或节点数组
   const childrenLength = arguments.length - 2;
   if (childrenLength === 1) {
     props.children = children;
@@ -416,9 +428,14 @@ export function createElement(type, config, children) {
   }
 
   // Resolve default props
+  // 处理默认的 props
+  // 比如 class Comp extends React.Component
+  // Comp.defaultProps = {} 这种情况
   if (type && type.defaultProps) {
     const defaultProps = type.defaultProps;
     for (propName in defaultProps) {
+      // 遍历 defaultProps 上的 key，如果上面处理过的 props 上这个 key 没定义值，那值就用 defaultProps 上的
+      // 注意判断条件是 undefined，换句话说，如果 props 上 key 的值是 null，并不会采用默认值
       if (props[propName] === undefined) {
         props[propName] = defaultProps[propName];
       }
