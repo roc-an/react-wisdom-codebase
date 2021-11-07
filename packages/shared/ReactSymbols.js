@@ -10,9 +10,13 @@
 // ATTENTION
 // When adding new symbols to this file,
 // Please consider also adding to 'react-devtools-shared/src/backend/ReactSymbols'
+// 注意：
+// 如果要在本文件添加新 symbol，请考虑同样将它们添加到 'react-devtools-shared/src/backend/ReactSymbols'
 
 // The Symbol used to tag the ReactElement-like types. If there is no native Symbol
 // nor polyfill, then a plain number is used for performance.
+// Symbol 用来标识类 ReactElement 类型。
+// 如果没有 Symbol 的原生支持，也没有 polyfill，那么性能起见，使用纯数字。
 export let REACT_ELEMENT_TYPE = 0xeac7;
 export let REACT_PORTAL_TYPE = 0xeaca;
 export let REACT_FRAGMENT_TYPE = 0xeacb;

@@ -131,6 +131,9 @@ function warnIfStringRefCannotBeAutoConverted(config) {
  * the class pattern, so do not use new to call it. Also, instanceof check
  * will not work. Instead test $$typeof field against Symbol.for('react.element') to check
  * if something is a React Element.
+ * 
+ * 创建新 ReactElement 的工厂函数。命名虽然是大驼峰，但它并不是一个 class，所以不要用 new 调用，实例检测也不会奏效。
+ * 取而代之的是，可以通过判断 $$typeof 是否是 Symbol.for('react.element') 来检查是否是 ReactElement。
  *
  * @param {*} type
  * @param {*} props
@@ -149,15 +152,18 @@ function warnIfStringRefCannotBeAutoConverted(config) {
 const ReactElement = function(type, key, ref, self, source, owner, props) {
   const element = {
     // This tag allows us to uniquely identify this as a React Element
+    // 该属性允许我们唯一标识是否是 ReactElement
     $$typeof: REACT_ELEMENT_TYPE,
 
     // Built-in properties that belong on the element
-    type: type,
+    // 内置属性
+    type: type, // 是用来记录标签名字符串、class component、function component、fragment 这些类型的
     key: key,
     ref: ref,
     props: props,
 
     // Record the component responsible for creating this element.
+    // 记录负责创建该元素的组件
     _owner: owner,
   };
 
@@ -179,6 +185,7 @@ const ReactElement = function(type, key, ref, self, source, owner, props) {
       value: false,
     });
     // self and source are DEV only properties.
+    // self 和 source 是 DEV 环境仅有的属性
     Object.defineProperty(element, '_self', {
       configurable: false,
       enumerable: false,
