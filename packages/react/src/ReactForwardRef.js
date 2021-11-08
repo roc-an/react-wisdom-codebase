@@ -7,6 +7,7 @@
 
 import {REACT_FORWARD_REF_TYPE, REACT_MEMO_TYPE} from 'shared/ReactSymbols';
 
+// 调用 forwardRef 将返回一个对象，对象的 render 原封不动被透传，只是多了个 $$typeof
 export function forwardRef<Props, ElementType: React$ElementType>(
   render: (props: Props, ref: React$Ref<ElementType>) => React$Node,
 ) {
