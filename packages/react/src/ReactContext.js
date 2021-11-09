@@ -14,6 +14,7 @@ import type {ReactContext} from 'shared/ReactTypes';
 export function createContext<T>(defaultValue: T): ReactContext<T> {
   // TODO: Second argument used to be an optional `calculateChangedBits`
   // function. Warn to reserve for future use?
+  // TODO: 第二个参数曾是可选的 `calculateChangedBits` 函数，用来计算新旧 context 变化。
 
   const context: ReactContext<T> = {
     $$typeof: REACT_CONTEXT_TYPE,
@@ -22,6 +23,12 @@ export function createContext<T>(defaultValue: T): ReactContext<T> {
     // there to be two concurrent renderers at most: React Native (primary) and
     // Fabric (secondary); React DOM (primary) and React ART (secondary).
     // Secondary renderers store their context values on separate fields.
+    // 作为支持渲染器并存这种情况的应变方案，我们将这些渲染器分为主要和次要的。
+    // 最多只允许两个并存渲染器：
+    //   React Native（主要）和 Fabric（次要）；
+    //   React DOM（主要）和 React ART（次要）；
+    // 次要渲染器用单独的字段来存储它们的 Context
+    // 这两个属性是用来记录不同渲染器下（也就是不同平台下）context 的值的
     _currentValue: defaultValue,
     _currentValue2: defaultValue,
     // Used to track how many concurrent renderers this context currently
@@ -37,6 +44,7 @@ export function createContext<T>(defaultValue: T): ReactContext<T> {
     _context: context,
   };
 
+  // 开发环境下的警告相关
   let hasWarnedAboutUsingNestedContextConsumers = false;
   let hasWarnedAboutUsingConsumerProvider = false;
   let hasWarnedAboutDisplayNameOnConsumer = false;
@@ -121,6 +129,7 @@ export function createContext<T>(defaultValue: T): ReactContext<T> {
     // $FlowFixMe: Flow complains about missing properties because it doesn't understand defineProperty
     context.Consumer = Consumer;
   } else {
+    // 这里 Consumer 就是 context 对象，所以当使用 Consumer 时，就可以通过自身的 _currentValue 拿到当前 context 的值
     context.Consumer = context;
   }
 
