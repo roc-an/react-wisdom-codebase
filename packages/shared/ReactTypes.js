@@ -160,6 +160,9 @@ export interface Wakeable {
 // The subset of a Promise that React APIs rely on. This resolves a value.
 // This doesn't require a return value neither from the handler nor the
 // then function.
+// React API 所依赖的 Promise 子集。then 方法中 resolve 值
+// 处理函数和 then 函数中都不需要返回值
+// 这是一个 Thenable 对象，也就是有着 then 方法的对象
 export interface Thenable<+R> {
   then<U>(
     onFulfill: (value: R) => void | Thenable<U> | U,
