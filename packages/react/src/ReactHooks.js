@@ -37,6 +37,9 @@ function resolveDispatcher() {
   // Will result in a null access error if accessed outside render phase. We
   // intentionally don't throw our own error because this is in a hot path.
   // Also helps ensure this is inlined.
+
+  // 如果在渲染阶段外访问，会得到 null 的访问错误。
+  // 由于这是一个热点路径（频繁执行到的代码），所以故意没有抛自定义错误。
   return ((dispatcher: any): Dispatcher);
 }
 
@@ -76,6 +79,7 @@ export function useContext<T>(Context: ReactContext<T>): T {
   return dispatcher.useContext(Context);
 }
 
+// API Docs: https://reactjs.org/docs/hooks-reference.html#usestate
 export function useState<S>(
   initialState: (() => S) | S,
 ): [S, Dispatch<BasicStateAction<S>>] {
@@ -97,9 +101,10 @@ export function useRef<T>(initialValue: T): {|current: T|} {
   return dispatcher.useRef(initialValue);
 }
 
+// API Docs: https://reactjs.org/docs/hooks-reference.html#useeffect
 export function useEffect(
-  create: () => (() => void) | void,
-  deps: Array<mixed> | void | null,
+  create: () => (() => void) | void, // 一个包含命令式、可能有副作用代码的函数
+  deps: Array<mixed> | void | null, // effect 重新执行所依赖的值数组，只有当数组中的值变化了，effect 才会在本轮渲染中被执行
 ): void {
   const dispatcher = resolveDispatcher();
   return dispatcher.useEffect(create, deps);
