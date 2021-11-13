@@ -70,6 +70,7 @@ const createElement = __DEV__ ? createElementWithValidation : createElementProd;
 const cloneElement = __DEV__ ? cloneElementWithValidation : cloneElementProd;
 const createFactory = __DEV__ ? createFactoryWithValidation : createFactoryProd;
 
+// React.Children API Docs: https://reactjs.org/docs/react-api.html#reactchildren
 const Children = {
   map,
   forEach,

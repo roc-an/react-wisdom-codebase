@@ -59,6 +59,7 @@ if (typeof Symbol === 'function' && Symbol.for) {
 const MAYBE_ITERATOR_SYMBOL = typeof Symbol === 'function' && Symbol.iterator;
 const FAUX_ITERATOR_SYMBOL = '@@iterator';
 
+// 获取传参的 Iterator 函数，如果传参不是可迭代对象，或者没有 Iterator 函数，那么 return null
 export function getIteratorFn(maybeIterable: ?any): ?() => ?Iterator<*> {
   if (maybeIterable === null || typeof maybeIterable !== 'object') {
     return null;
