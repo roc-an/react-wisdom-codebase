@@ -104,6 +104,7 @@ export {
   useState,
   REACT_FRAGMENT_TYPE as Fragment, // React.Fragment 就是一个 Symbol，它不会生成任何其他节点
   REACT_PROFILER_TYPE as Profiler,
+  // React.StrictMode 是一个 Symbol，它不会渲染任何节点，只是为其后代节点提供额外的检查和警告
   REACT_STRICT_MODE_TYPE as StrictMode,
   REACT_DEBUG_TRACING_MODE_TYPE as unstable_DebugTracingMode,
   REACT_SUSPENSE_TYPE as Suspense,
