@@ -1,75 +1,23 @@
-# [React](https://reactjs.org/) &middot; [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebook/react/blob/main/LICENSE) [![npm version](https://img.shields.io/npm/v/react.svg?style=flat)](https://www.npmjs.com/package/react) [![CircleCI Status](https://circleci.com/gh/facebook/react.svg?style=shield&circle-token=:circle-token)](https://circleci.com/gh/facebook/react) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://reactjs.org/docs/how-to-contribute.html#your-first-pull-request)
+# React Wisdom Codebase
 
-React is a JavaScript library for building user interfaces.
+React 17 源码详细注解。
 
-* **Declarative:** React makes it painless to create interactive UIs. Design simple views for each state in your application, and React will efficiently update and render just the right components when your data changes. Declarative views make your code more predictable, simpler to understand, and easier to debug.
-* **Component-Based:** Build encapsulated components that manage their own state, then compose them to make complex UIs. Since component logic is written in JavaScript instead of templates, you can easily pass rich data through your app and keep state out of the DOM.
-* **Learn Once, Write Anywhere:** We don't make assumptions about the rest of your technology stack, so you can develop new features in React without rewriting existing code. React can also render on the server using Node and power mobile apps using [React Native](https://reactnative.dev/).
+我会尽可能地确保每次 `commit` 都是一块相对完整的功能。可以配合着 [react-wisdom](https://github.com/roc-an/react-wisdom/issues) 阅读，里面用专题文章的形式对有价值的源码模块做了图文剖析。
 
-[Learn how to use React in your own project](https://reactjs.org/docs/getting-started.html).
+## 目前已完成的关键注解
 
-## Installation
+### `react` package
 
-React has been designed for gradual adoption from the start, and **you can use as little or as much React as you need**:
+React 各顶层 API：
 
-* Use [Online Playgrounds](https://reactjs.org/docs/getting-started.html#online-playgrounds) to get a taste of React.
-* [Add React to a Website](https://reactjs.org/docs/add-react-to-a-website.html) as a `<script>` tag in one minute.
-* [Create a New React App](https://reactjs.org/docs/create-a-new-react-app.html) if you're looking for a powerful JavaScript toolchain.
+* [`React.createElement`](https://github.com/roc-an/react-wisdom-codebase/commit/31f5842a99f0bd6326c2fd5a68dda52c9c73b3ae)；
+* [`React.Component` 与 `React.pureComponent`](https://github.com/roc-an/react-wisdom-codebase/commit/aaa9a78b379b4e0e691e42270db20aaa0f923738)；
+* [`React.Children`](https://github.com/roc-an/react-wisdom-codebase/commit/d6471fb486c7f5c45a21c98a132f5e85137e2a9e)；
+* [`React.createRef`](https://github.com/roc-an/react-wisdom-codebase/commit/e00e962fa88af985b5b32c8dfa3404e953009de6) 与 [`React.forwardRef`](https://github.com/roc-an/react-wisdom-codebase/commit/5adddf6b5244aff1c6cf4ee9332d8f38f5220baa)；
+* [`React.createContext`](https://github.com/roc-an/react-wisdom-codebase/commit/fbd5905ef7c549ee418db822c21f3cbc343506bd)；
+* [`React.Lazy`](https://github.com/roc-an/react-wisdom-codebase/commit/a772cf0791ca388c8c73c1be3d01027ecb1d8c23)；
+* [`React.memo`](https://github.com/roc-an/react-wisdom-codebase/commit/4e1578f2a02a483daec2fdae8e6d9498ec5f86a6)
 
-You can use React as a `<script>` tag from a [CDN](https://reactjs.org/docs/cdn-links.html), or as a `react` package on [npm](https://www.npmjs.com/package/react).
+React Hooks：
 
-## Documentation
-
-You can find the React documentation [on the website](https://reactjs.org/).  
-
-Check out the [Getting Started](https://reactjs.org/docs/getting-started.html) page for a quick overview.
-
-The documentation is divided into several sections:
-
-* [Tutorial](https://reactjs.org/tutorial/tutorial.html)
-* [Main Concepts](https://reactjs.org/docs/hello-world.html)
-* [Advanced Guides](https://reactjs.org/docs/jsx-in-depth.html)
-* [API Reference](https://reactjs.org/docs/react-api.html)
-* [Where to Get Support](https://reactjs.org/community/support.html)
-* [Contributing Guide](https://reactjs.org/docs/how-to-contribute.html)
-
-You can improve it by sending pull requests to [this repository](https://github.com/reactjs/reactjs.org).
-
-## Examples
-
-We have several examples [on the website](https://reactjs.org/). Here is the first one to get you started:
-
-```jsx
-function HelloMessage({ name }) {
-  return <div>Hello {name}</div>;
-}
-
-ReactDOM.render(
-  <HelloMessage name="Taylor" />,
-  document.getElementById('container')
-);
-```
-
-This example will render "Hello Taylor" into a container on the page.
-
-You'll notice that we used an HTML-like syntax; [we call it JSX](https://reactjs.org/docs/introducing-jsx.html). JSX is not required to use React, but it makes code more readable, and writing it feels like writing HTML. If you're using React as a `<script>` tag, read [this section](https://reactjs.org/docs/add-react-to-a-website.html#optional-try-react-with-jsx) on integrating JSX; otherwise, the [recommended JavaScript toolchains](https://reactjs.org/docs/create-a-new-react-app.html) handle it automatically.
-
-## Contributing
-
-The main purpose of this repository is to continue evolving React core, making it faster and easier to use. Development of React happens in the open on GitHub, and we are grateful to the community for contributing bugfixes and improvements. Read below to learn how you can take part in improving React.
-
-### [Code of Conduct](https://code.fb.com/codeofconduct)
-
-Facebook has adopted a Code of Conduct that we expect project participants to adhere to. Please read [the full text](https://code.fb.com/codeofconduct) so that you can understand what actions will and will not be tolerated.
-
-### [Contributing Guide](https://reactjs.org/contributing/how-to-contribute.html)
-
-Read our [contributing guide](https://reactjs.org/contributing/how-to-contribute.html) to learn about our development process, how to propose bugfixes and improvements, and how to build and test your changes to React.
-
-### Good First Issues
-
-To help you get your feet wet and get you familiar with our contribution process, we have a list of [good first issues](https://github.com/facebook/react/labels/good%20first%20issue) that contain bugs which have a relatively limited scope. This is a great place to get started.
-
-### License
-
-React is [MIT licensed](./LICENSE).
+* [`React.useState` 与 `React.useEffect`](https://github.com/roc-an/react-wisdom-codebase/commit/02cf9533e741848b179c365db8a16862fef3d015)；
