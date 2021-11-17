@@ -505,9 +505,11 @@ export function cloneAndReplaceKey(oldElement, newKey) {
 
 /**
  * Clone and return a new ReactElement using element as the starting point.
+ * 以传入的元素为样板，克隆并返回一个新 React 元素
  * See https://reactjs.org/docs/react-api.html#cloneelement
  */
 export function cloneElement(element, config, children) {
+  // 传入的 element 是 null 或 undefined 则抛错
   if (element === null || element === undefined) {
     throw new Error(
       `React.cloneElement(...): The argument must be a React element, but you passed ${element}.`,
@@ -517,27 +519,33 @@ export function cloneElement(element, config, children) {
   let propName;
 
   // Original props are copied
+  // 拷贝原元素的 props
   const props = Object.assign({}, element.props);
 
   // Reserved names are extracted
   let key = element.key;
   let ref = element.ref;
   // Self is preserved since the owner is preserved.
+  // 因为 owner 是保留的，所以 _self 也要保留
   const self = element._self;
   // Source is preserved since cloneElement is unlikely to be targeted by a
   // transpiler, and the original source is probably a better indicator of the
   // true owner.
+  // 编译器并不是直接面向 cloneElement 的，因此 _source 将会保留，这样原 source 可以更好地指明真正的 owner
   const source = element._source;
 
   // Owner will be preserved, unless ref is overridden
+  // 除非重写了 ref，一般 _owner 也要被保留
   let owner = element._owner;
 
   if (config != null) {
+    // 优先使用传入的 config 中的 ref
     if (hasValidRef(config)) {
       // Silently steal the ref from the parent.
       ref = config.ref;
       owner = ReactCurrentOwner.current;
     }
+    // 优先使用传入的 config 中的 key
     if (hasValidKey(config)) {
       if (__DEV__) {
         checkKeyStringCoercion(config.key);
@@ -546,15 +554,18 @@ export function cloneElement(element, config, children) {
     }
 
     // Remaining properties override existing props
+    // 将其余属性合并至之前定义的 props 对象中（并做了默认值处理）
     let defaultProps;
     if (element.type && element.type.defaultProps) {
       defaultProps = element.type.defaultProps;
     }
+    // 通过 hasOwnProperty 仅遍历 config 对象自身的属性
     for (propName in config) {
       if (
         hasOwnProperty.call(config, propName) &&
         !RESERVED_PROPS.hasOwnProperty(propName)
       ) {
+        // props 默认值处理
         if (config[propName] === undefined && defaultProps !== undefined) {
           // Resolve default props
           props[propName] = defaultProps[propName];
@@ -567,6 +578,9 @@ export function cloneElement(element, config, children) {
 
   // Children can be more than one argument, and those are transferred onto
   // the newly allocated props object.
+  // 传入的 children 参数可能多于 1 个，分情况去处理：
+  //   如果传入 1 个，props.children 就是单节点
+  //   如果传入多个，props.children 就是节点数组
   const childrenLength = arguments.length - 2;
   if (childrenLength === 1) {
     props.children = children;
@@ -578,6 +592,7 @@ export function cloneElement(element, config, children) {
     props.children = childArray;
   }
 
+  // 将 clone 后的节点信息传入 ReactElement() 得到新节点对象
   return ReactElement(element.type, key, ref, self, source, owner, props);
 }
 
