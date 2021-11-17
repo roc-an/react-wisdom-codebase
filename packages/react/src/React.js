@@ -102,7 +102,7 @@ export {
   useReducer,
   useRef,
   useState,
-  REACT_FRAGMENT_TYPE as Fragment,
+  REACT_FRAGMENT_TYPE as Fragment, // React.Fragment 就是一个 Symbol，它不会生成任何其他节点
   REACT_PROFILER_TYPE as Profiler,
   REACT_STRICT_MODE_TYPE as StrictMode,
   REACT_DEBUG_TRACING_MODE_TYPE as unstable_DebugTracingMode,
