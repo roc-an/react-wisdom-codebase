@@ -475,6 +475,9 @@ export function createElement(type, config, children) {
 
 /**
  * Return a function that produces ReactElements of a given type.
+ * 返回用于生成指定类型 ReactElement 的函数
+ * 如果要重复创建某个指定类型的元素，可以先调用它得到工厂函数，后续通过工厂函数创建元素就不用传 type 了
+ * 如果使用 JSX，通常不会用到它
  * See https://reactjs.org/docs/react-api.html#createfactory
  */
 export function createFactory(type) {
@@ -484,6 +487,7 @@ export function createFactory(type) {
   // This should not be named `constructor` since this may not be the function
   // that created the element, and it may not even be a constructor.
   // Legacy hook: remove it
+  // 将 type 暴露在工厂函数上以便通过元素快速访问，比如 `<Foo />.type === Foo`
   factory.type = type;
   return factory;
 }
