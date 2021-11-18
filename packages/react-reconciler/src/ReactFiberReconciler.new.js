@@ -252,9 +252,11 @@ export function createContainer(
   );
 }
 
+// 用 element 更新 container 节点的内容
+// 创建更新，并加入更新队列
 export function updateContainer(
   element: ReactNodeList,
-  container: OpaqueRoot,
+  container: OpaqueRoot, // 是一个 FiberRoot
   parentComponent: ?React$Component<any, any>,
   callback: ?Function,
 ): Lane {
@@ -293,9 +295,11 @@ export function updateContainer(
     }
   }
 
+  // 创建更新，标记了要更新的地点
   const update = createUpdate(eventTime, lane);
   // Caution: React DevTools currently depends on this property
   // being called "element".
+  // 注意：React DevTools 目前依赖于这个叫 'element' 的属性
   update.payload = {element};
 
   callback = callback === undefined ? null : callback;
@@ -312,7 +316,10 @@ export function updateContainer(
     update.callback = callback;
   }
 
+  // 将更新加入到 updateQueue 更新队列中
+  // 在 React 的一次应用整体更新过程中，一个节点是可以携带多次更新的
   enqueueUpdate(current, update, lane);
+  // 根据任务的优先级进行调度、渲染
   const root = scheduleUpdateOnFiber(current, lane, eventTime);
   if (root !== null) {
     entangleTransitions(root, current, lane);
@@ -332,7 +339,7 @@ export {
 };
 
 export function getPublicRootInstance(
-  container: OpaqueRoot,
+  container: OpaqueRoot, // FiberRoot
 ): React$Component<any, any> | PublicInstance | null {
   const containerFiber = container.current;
   if (!containerFiber.child) {

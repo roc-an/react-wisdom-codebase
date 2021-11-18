@@ -7,12 +7,15 @@
  * @flow
  */
 
+// 目前 enableNewReconciler 是 false
 import {enableNewReconciler} from 'shared/ReactFeatureFlags';
 
 // The entry file imports either the old or new version of the reconciler.
 // During build and testing, this indirection is always shimmed with the actual
 // modules, otherwise both reconcilers would be initialized. So this is really
 // only here for Flow purposes.
+
+// 导入了新旧版 reconciler 的入口文件
 
 import {
   createContainer as createContainer_old,

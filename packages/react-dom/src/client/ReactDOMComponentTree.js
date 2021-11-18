@@ -32,6 +32,7 @@ import {getParentSuspenseInstance} from './ReactDOMHostConfig';
 
 import {enableScopeAPI} from 'shared/ReactFeatureFlags';
 
+// 比如能得到这种：'igrwvelbry8'
 const randomKey = Math.random()
   .toString(36)
   .slice(2);
@@ -59,6 +60,7 @@ export function precacheFiberNode(
   (node: any)[internalInstanceKey] = hostInst;
 }
 
+// 将 container 节点标记为 root
 export function markContainerAsRoot(hostRoot: Fiber, node: Container): void {
   node[internalContainerInstanceKey] = hostRoot;
 }

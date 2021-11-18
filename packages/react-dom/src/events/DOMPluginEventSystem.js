@@ -376,6 +376,7 @@ export function listenToNativeEventForNonManagedEventTarget(
   }
 }
 
+// 比如生成这种：'_reactListening6g8ncz1o9p5'
 const listeningMarker =
   '_reactListening' +
   Math.random()
@@ -384,10 +385,11 @@ const listeningMarker =
 
 export function listenToAllSupportedEvents(rootContainerElement: EventTarget) {
   if (!(rootContainerElement: any)[listeningMarker]) {
-    (rootContainerElement: any)[listeningMarker] = true;
+    (rootContainerElement: any)[listeningMarker] = true; // 设置 listeningMarker 属性为 true
     allNativeEvents.forEach(domEventName => {
       // We handle selectionchange separately because it
       // doesn't bubble and needs to be on the document.
+      // 由于 selectionchange 不会冒泡，所以在 document 上单独对它处理
       if (domEventName !== 'selectionchange') {
         if (!nonDelegatedEvents.has(domEventName)) {
           listenToNativeEvent(domEventName, false, rootContainerElement);

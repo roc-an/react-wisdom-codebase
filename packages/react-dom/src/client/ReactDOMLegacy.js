@@ -102,18 +102,22 @@ function getReactRootElementInContainer(container: any) {
   }
 }
 
+// 创建要渲染至 container 的根节点
 function legacyCreateRootFromDOMContainer(
   container: Container,
-  forceHydrate: boolean,
+  forceHydrate: boolean, // 是否需要调和、复用 container 中已有节点，主要用于服务端渲染
 ): FiberRoot {
   // First clear any existing content.
+  // 先将 container 的所有子节点移除
   if (!forceHydrate) {
-    let rootSibling;
+    let rootSibling; // 根节点的兄弟节点
+    // Node.lastChild 是一个只读属性，返回节点的最后一个子节点，没有则返回 null
     while ((rootSibling = container.lastChild)) {
       container.removeChild(rootSibling);
     }
   }
 
+  // 创建根节点 FiberRoot
   const root = createContainer(
     container,
     LegacyRoot,
@@ -122,8 +126,11 @@ function legacyCreateRootFromDOMContainer(
     false, // isStrictMode
     false, // concurrentUpdatesByDefaultOverride,
   );
+  // 将 container 节点标记为 root
+  // container.__reactContainer$randomKey = root.current
   markContainerAsRoot(root.current, container);
 
+  // 令 container 监听所有已支持事件（container 如果是注释，就让 container 的父节点监听）
   const rootContainerElement =
     container.nodeType === COMMENT_NODE ? container.parentNode : container;
   listenToAllSupportedEvents(rootContainerElement);
@@ -144,12 +151,13 @@ function warnOnInvalidCallback(callback: mixed, callerName: string): void {
   }
 }
 
+// 将子树渲染至 container（遗留的）
 function legacyRenderSubtreeIntoContainer(
   parentComponent: ?React$Component<any, any>,
-  children: ReactNodeList,
-  container: Container,
+  children: ReactNodeList, // 要渲染的子节点
+  container: Container, // 渲染至的容器节点
   forceHydrate: boolean,
-  callback: ?Function,
+  callback: ?Function, // 渲染后执行的回调
 ) {
   if (__DEV__) {
     topLevelUpdateWarnings(container);
@@ -160,11 +168,13 @@ function legacyRenderSubtreeIntoContainer(
   let fiberRoot: FiberRoot;
   if (!root) {
     // Initial mount
+    // 如果 container 没有 _reactRootContainer 属性，说明是首次渲染
     root = container._reactRootContainer = legacyCreateRootFromDOMContainer(
       container,
       forceHydrate,
     );
     fiberRoot = root;
+    // 包装传入的回调，将创建的根组件实例作为回调的 this
     if (typeof callback === 'function') {
       const originalCallback = callback;
       callback = function() {
@@ -173,11 +183,13 @@ function legacyRenderSubtreeIntoContainer(
       };
     }
     // Initial mount should not be batched.
+    // 首次挂载不会进行批量更新
     flushSync(() => {
       updateContainer(children, fiberRoot, parentComponent, callback);
     });
   } else {
-    fiberRoot = root;
+    // 如果非首次渲染，也就是 container 里面已经渲染过一些 ReactElement 了
+    fiberRoot = root; // 直接取 container._reactRootContainer 就好，因为之前渲染已经有了该属性
     if (typeof callback === 'function') {
       const originalCallback = callback;
       callback = function() {
@@ -223,6 +235,9 @@ export function findDOMNode(
   return findHostInstance(componentOrElement);
 }
 
+// ReactDOM.hydrate API Doc: https://reactjs.org/docs/react-dom.html#hydrate
+// 它内部同 ReactDOM.render 几乎一样，也是 return 了 legacyRenderSubtreeIntoContainer()
+// 唯一区别是第 4 个参数 forceHydrate 为 true，表示要进行调和优化
 export function hydrate(
   element: React$Node,
   container: Container,
@@ -254,6 +269,7 @@ export function hydrate(
     }
   }
   // TODO: throw or warn if we couldn't hydrate?
+  // TODO: 如果无法调和，进行抛错或警告
   return legacyRenderSubtreeIntoContainer(
     null,
     element,
@@ -263,10 +279,12 @@ export function hydrate(
   );
 }
 
+// ReactDOM.render API Doc: https://reactjs.org/docs/react-dom.html#render
+// 在 container 里渲染 ReactElement，返回对该组件的引用（无状态组件返回 null）
 export function render(
-  element: React$Element<any>,
-  container: Container,
-  callback: ?Function,
+  element: React$Element<any>, // 要渲染的 ReactElement 对象
+  container: Container, // 要渲染至的容器节点
+  callback: ?Function, // 渲染后执行的回调
 ) {
   if (__DEV__) {
     console.error(

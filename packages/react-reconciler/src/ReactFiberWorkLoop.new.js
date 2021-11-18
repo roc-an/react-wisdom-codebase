@@ -262,6 +262,7 @@ const RootSuspendedWithDelay = 4;
 const RootCompleted = 5;
 
 // Describes where we are in the React execution stack
+// 调用上下文，描述正处于 React 执行栈中的哪
 let executionContext: ExecutionContext = NoContext;
 // The root we're working on
 let workInProgressRoot: FiberRoot | null = null;

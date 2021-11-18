@@ -181,6 +181,7 @@ function flushSync(fn) {
   return flushSyncWithoutWarningIfAlreadyRendering(fn);
 }
 
+// export 使用大括号指定所要输出的一组变量
 export {
   createPortal,
   batchedUpdates as unstable_batchedUpdates,

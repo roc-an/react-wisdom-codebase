@@ -72,6 +72,7 @@ export const disableJavaScriptURLs = false;
 export const enableScopeAPI = false;
 
 // Experimental Create Event Handle API.
+// 是否支持实验性的创建事件处理函数 API
 export const enableCreateEventHandleAPI = false;
 
 // New API for JSX transforms to target - https://github.com/reactjs/rfcs/pull/107
@@ -107,7 +108,7 @@ export const enableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay = fa
 
 export const enableComponentStackLocations = true;
 
-export const enableNewReconciler = false;
+export const enableNewReconciler = false; // 是否使用新的 Reconciler
 
 export const disableNativeComponentFrames = false;
 

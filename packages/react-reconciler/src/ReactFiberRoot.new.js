@@ -94,6 +94,7 @@ function FiberRootNode(containerInfo, tag, hydrate) {
   }
 }
 
+// 创建 FiberRoot
 export function createFiberRoot(
   containerInfo: any,
   tag: RootTag,
