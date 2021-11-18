@@ -85,6 +85,8 @@ export const enableCreateEventHandleAPI = false;
 // the user to see a loading state.
 // Also allows hydration callbacks to fire when a dehydrated boundary gets
 // hydrated or deleted.
+// 为 suspense 增加了 callback 属性来通知那些正处于更新队列的 promise。
+// 使用它将可以报告和跟踪是什么造成了用户看到的是 Loading 状态
 export const enableSuspenseCallback = false;
 
 // Part of the simplification of React.createElement so we can eventually move

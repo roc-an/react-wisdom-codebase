@@ -190,28 +190,43 @@ export type Fiber = {|
   _debugHookTypes?: Array<HookType> | null,
 |};
 
+// 主要的 FiberRoot 属性
 type BaseFiberRootProperties = {|
   // The type of root (legacy, batched, concurrent, etc.)
+  // root 类型（legacy、batched、concurrent 等等）
   tag: RootTag,
 
   // Any additional information from the host associated with this root.
+  // 携带着来自宿主的任何和该 root 相关的信息
+  // ReactDOM.render() 传入的第二个参数，即要渲染至的容器节点
   containerInfo: any,
   // Used only by persistent updates.
+  // 仅在持久更新（比如 SSR）中用到，react-dom 不会用到
   pendingChildren: any,
   // The currently active root fiber. This is the mutable root of the tree.
+  // 当前激活的根 Fiber，是 Fiber 树的根
+  // 整个应用维护着一棵 Fiber 树，每个 ReactElement 都对应着一个 Fiber 对象。
+  // 该 FiberRoot 的 current 是 Fiber 树的顶点
   current: Fiber,
 
   pingCache: WeakMap<Wakeable, Set<mixed>> | Map<Wakeable, Set<mixed>> | null,
 
   // A finished work-in-progress HostRoot that's ready to be committed.
+  // 用于记录在一次更新渲染过程中完成了的那个更新任务（也就是每次更新渲染的最高优先级的那个任务）
+  // 之所以将它挂在 root 上面，是因为更新后就要渲染实际 DOM 了，此时可以读取 finishedWork 属性
   finishedWork: Fiber | null,
   // Timeout handle returned by setTimeout. Used to cancel a pending timeout, if
   // it's superseded by a new one.
+  // 由 setTimeout return 的超时句柄，用于取消 pending 超时
+  // 多用于 <React.Suspense>，在其中 throw promise 实例，任务会被挂起，timeoutHandle 用于记录挂起的超时情况
   timeoutHandle: TimeoutHandle | NoTimeout,
   // Top context object, used by renderSubtreeIntoContainer
+  // 顶层 context 对象（超低频使用）
+  // 只有主动调用 renderSubtreeIntoContainer 才会有 context 对象
   context: Object | null,
   pendingContext: Object | null,
   // Determines if we should attempt to hydrate on the initial mount
+  // 决定首次渲染时是否应尝试调和（复用 container 的已渲染子节点）
   +isDehydrated: boolean,
 
   // Used by useMutableSource hook to avoid tearing during hydration.
@@ -221,6 +236,7 @@ type BaseFiberRootProperties = {|
 
   // Node returned by Scheduler.scheduleCallback. Represents the next rendering
   // task that the root will work on.
+  // 由 Scheduler.scheduleCallback return 的节点。代表了 root 将进行的下一个渲染任务
   callbackNode: *,
   callbackPriority: Lane,
   eventTimes: LaneMap<number>,

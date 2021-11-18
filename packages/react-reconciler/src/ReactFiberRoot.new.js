@@ -30,6 +30,7 @@ import {initializeUpdateQueue} from './ReactUpdateQueue.new';
 import {LegacyRoot, ConcurrentRoot} from './ReactRootTags';
 import {createCache, retainCache} from './ReactFiberCacheComponent.new';
 
+// 创建 FiberRoot 的构造函数
 function FiberRootNode(containerInfo, tag, hydrate) {
   this.tag = tag;
   this.containerInfo = containerInfo;
@@ -96,7 +97,7 @@ function FiberRootNode(containerInfo, tag, hydrate) {
 
 // 创建 FiberRoot
 export function createFiberRoot(
-  containerInfo: any,
+  containerInfo: any, // 应用要挂载至的 DOM 节点
   tag: RootTag,
   hydrate: boolean,
   hydrationCallbacks: null | SuspenseHydrationCallbacks,
@@ -104,7 +105,7 @@ export function createFiberRoot(
   concurrentUpdatesByDefaultOverride: null | boolean,
 ): FiberRoot {
   const root: FiberRoot = (new FiberRootNode(containerInfo, tag, hydrate): any);
-  if (enableSuspenseCallback) {
+  if (enableSuspenseCallback) { // 默认是 false
     root.hydrationCallbacks = hydrationCallbacks;
   }
 
