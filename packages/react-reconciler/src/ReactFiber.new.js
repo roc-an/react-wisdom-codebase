@@ -111,6 +111,7 @@ if (__DEV__) {
   }
 }
 
+// 创建 Fiber 对象的构造函数
 function FiberNode(
   tag: WorkTag,
   pendingProps: mixed,
@@ -118,20 +119,27 @@ function FiberNode(
   mode: TypeOfMode,
 ) {
   // Instance
-  this.tag = tag;
+  this.tag = tag; // 该 Fiber 对应的组件的类型 Function/class/...
   this.key = key;
-  this.elementType = null;
+  this.elementType = null; // 大部分情况同 type，某些情况不同，比如 FunctionalComponent 使用 React.memo 包裹
+  // 如果是 Class Component，type 就是这个 class
+  // 如果是 Functional Component，type 就是这个函数
+  // 如果是 Host Component，type 就是 DOM 节点的 TagName
   this.type = null;
+  // 该 Fiber 对应的真实 DOM
   this.stateNode = null;
 
   // Fiber
+  // 用于连接其他 Fiber 节点，形成单向链表 Fiber 树
+  // 指向父 Fiber，之所以叫 return 是因为这里指节点执行完 completeWork 后会返回的下一个节点
   this.return = null;
-  this.child = null;
-  this.sibling = null;
+  this.child = null; // 指向子 Fiber
+  this.sibling = null; // 指向下一个兄弟 Fiber
   this.index = 0;
 
   this.ref = null;
 
+  // 作为工作单元的属性
   this.pendingProps = pendingProps;
   this.memoizedProps = null;
   this.updateQueue = null;
@@ -145,9 +153,11 @@ function FiberNode(
   this.subtreeFlags = NoFlags;
   this.deletions = null;
 
+  // 调度优先级相关属性
   this.lanes = NoLanes;
   this.childLanes = NoLanes;
 
+  // current 和 workInProgress 交替更新对应的 Fiber
   this.alternate = null;
 
   if (enableProfilerTimer) {
