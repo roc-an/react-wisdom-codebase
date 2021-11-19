@@ -61,6 +61,7 @@ export type Dependencies = {
 
 // A Fiber is work on a Component that needs to be done or was done. There can
 // be more than one per component.
+// 一个 Fiber 是组件上需要完成或已完成的任务
 export type Fiber = {|
   // These first fields are conceptually members of an Instance. This used to
   // be split into a separate type and intersected with the other Fiber fields,
@@ -73,36 +74,51 @@ export type Fiber = {|
   // minimize the number of objects created during the initial render.
 
   // Tag identifying the type of fiber.
+  // 标记不同的 Fiber 类型，比如原生 DOM 节点、Class Component、Functional Component 等
   tag: WorkTag,
 
   // Unique identifier of this child.
+  // 唯一标识该子节点，也就是 ReactElement 的 key
   key: null | string,
 
   // The value of element.type which is used to preserve the identity during
   // reconciliation of this child.
+  // ReactElement.type，即 React.createElement() 的首个参数，用来保留 reconciliation 过程中该子节点的身份
   elementType: any,
 
   // The resolved function/class/ associated with this fiber.
+  // 与这个 Fiber 相关的 resolved 了的 function/class
+  // 异步组件（Lazy Component）resolved 之后 return 的内容，一般是 function 或 class
   type: any,
 
   // The local state associated with this fiber.
+  // 该 Fiber 对象对应的实例（组件实例或 DOM 节点，Functional Component 没有实例，因此没有 stateNode）
+  // 通过该属性就可以维护组件实例上的 state 和 props 更新
   stateNode: any,
 
   // Conceptual aliases
   // parent : Instance -> return The parent happens to be the same as the
   // return fiber since we've merged the fiber and instance.
+  // 概念上的别名：
+  // parent：由于合并了 Fiber 和实例，因此实例 return 的父节点恰巧就是 Fiber return 的父节点
 
   // Remaining fields belong to Fiber
+  // 其余字段属于 Fiber
 
   // The Fiber to return to after finishing processing this one.
   // This is effectively the parent, but there can be multiple parents (two)
   // so this is only the parent of the thing we're currently processing.
   // It is conceptually the same as the return address of a stack frame.
+  // 指向自己的父节点
+  // 处理完当前 Fiber 后，要返回到的 Fiber
+  // 实际上就是当前 Fiber 的父 Fiber
+  // 通过 return、child、sibling 这 3 个属性，就能深度优先地遍历完整个 Fiber 单链表树
   return: Fiber | null,
 
   // Singly Linked List Tree Structure.
-  child: Fiber | null,
-  sibling: Fiber | null,
+  // 单链表树结构：通过自己的第一个子节点、自己的下一个兄弟节点的连接，构成单向链表树
+  child: Fiber | null, // 指向自己的第一个子节点（并不会存所有子节点）
+  sibling: Fiber | null, // 指向自己的下一个兄弟节点
   index: number,
 
   // The ref last used to attach this node.
@@ -113,16 +129,21 @@ export type Fiber = {|
     | RefObject,
 
   // Input is the data coming into process this fiber. Arguments. Props.
+  // pendingProps: 即将下一次更新前，节点的新 props
   pendingProps: any, // This type will be more specific once we overload the tag.
+  // memoizedProps: 上一次更新结束后，节点的 props
   memoizedProps: any, // The props used to create the output.
 
   // A queue of state updates and callbacks.
+  // 该 Fiber 对应的组件通过 setState 等触发了更新后，更新及其回调会存在该 Fiber 的 updateQueue 中
   updateQueue: mixed,
 
   // The state used to create the output
+  // 上一次更新完成后，Fiber 对应组件的 state
   memoizedState: any,
 
   // Dependencies (contexts, events) for this fiber, if it has any
+  // 该 Fiber 对象所依赖的 context、event
   dependencies: Dependencies | null,
 
   // Bitfield that describes properties about the fiber and its subtree. E.g.
@@ -131,9 +152,14 @@ export type Fiber = {|
   // parent. Additional flags can be set at creation time, but after that the
   // value should remain unchanged throughout the fiber's lifetime, particularly
   // before its child fibers are created.
+  // 描述当前 Fiber 和其子树的 Bitfield（二进制数字段，如 ConcurrentMode 0b000001）
+  // 比如，如果是 ConcurrentMode，那就表明子树默认是异步渲染的
+  // 创建 Fiber 时，该模式会继承自父节点。其他标识也可以在创建时设置，
+  // 一旦设置后，在整个 Fiber 生命周期内就不应再变了，尤其是在其子 Fiber 创建前
   mode: TypeOfMode,
 
   // Effect
+  // 副作用相关
   flags: Flags,
   subtreeFlags: Flags,
   deletions: Array<Fiber> | null,
@@ -153,6 +179,12 @@ export type Fiber = {|
   // This is a pooled version of a Fiber. Every fiber that gets updated will
   // eventually have a pair. There are cases when we can clean up pairs to save
   // memory if we need to.
+  // 这是一个 Fiber 的池化版（alternate 译为“交替”）。更新过程中，每个 Fiber 都会有与其对应的一个 Fiber
+  // 这两个 Fiber 是 current 和 workInProgress 的关系
+  // 更新过程中，会基于当前 Fiber（current Fiber）创建一个对应的正进行更新中的 Fiber（workInProgress Fiber）
+  // 更新渲染完成后，current Fiber 和 workInProgress Fiber 两者互换
+  // 之所以需要该属性来存着对应的 Fiber，是为了避免每次交换时重新创建对象的开销，直接通过该属性复用就行了
+  // 是一种双缓冲 Double Buffer 思想
   alternate: Fiber | null,
 
   // Time spent rendering this Fiber and its descendants for the current update.
