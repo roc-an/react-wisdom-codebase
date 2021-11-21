@@ -73,6 +73,7 @@ var taskQueue = [];
 var timerQueue = [];
 
 // Incrementing id counter. Used to maintain insertion order.
+// 递增的 ID 计数器，用于维护插入顺序
 var taskIdCounter = 1;
 
 // Pausing the scheduler is useful for debugging.
@@ -342,13 +343,15 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
 
   var expirationTime = startTime + timeout;
 
+  // Task 对象
+  // Task 队列是一个小顶堆数组，优先级最高的 Task 在堆的最顶端
   var newTask = {
-    id: taskIdCounter++,
-    callback,
-    priorityLevel,
-    startTime,
-    expirationTime,
-    sortIndex: -1,
+    id: taskIdCounter++, // 唯一标识
+    callback, // Task 最核心字段，指向 react-reconciler 提供的回调
+    priorityLevel, // 优先级
+    startTime, // Task 开始时间（创建时间 + 延迟时间）时间戳
+    expirationTime, // 过期时间
+    sortIndex: -1, // 控制 Task 在队列中的次序，值越小越靠前
   };
   if (enableProfiling) {
     newTask.isQueued = false;
