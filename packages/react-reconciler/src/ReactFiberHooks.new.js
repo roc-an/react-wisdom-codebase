@@ -137,12 +137,14 @@ if (__DEV__) {
   didWarnAboutMismatchedHooksForComponent = new Set();
 }
 
+// Hook 对象，多个 Hook 间形成了单向链表
+// FunctionalComponent Fiber 的 memoizedState 会指向 Hook，所以 Hook 不能脱离 Fiber 独立存在
 export type Hook = {|
-  memoizedState: any,
-  baseState: any,
-  baseQueue: Update<any, any> | null,
-  queue: any,
-  next: Hook | null,
+  memoizedState: any, // 缓存的 state，用于输出最终的 Fiber 树
+  baseState: any, // 基础 state，当 queue 更新后，它也会更新
+  baseQueue: Update<any, any> | null, // 基础 state 队列，在 Reconciler 阶段会帮助状态合并
+  queue: any, // 指向一个 Update 队列
+  next: Hook | null, // 指向该 FunctionalComponent 的下一个 Hook 对象，所以多个 Hook 间也形成了单向链表
 |};
 
 export type Effect = {|

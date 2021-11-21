@@ -27,6 +27,8 @@ import type {Wakeable} from 'shared/ReactTypes';
 import type {Cache} from './ReactFiberCacheComponent.old';
 
 // Unwind Circular: moved from ReactFiberHooks.old
+// 移除通知：从 ReactFiberHooks.old 中移除
+// 17 种 Hook 类型
 export type HookType =
   | 'useState'
   | 'useReducer'
@@ -149,6 +151,7 @@ export type Fiber = {|
 
   // The state used to create the output
   // 上一次更新完成后，Fiber 对应组件的 state
+  // 如果该 Fiber 对应 FunctionalComponent，那么 memoizedState 指向 Hook 队列
   memoizedState: any,
 
   // Dependencies (contexts, events) for this fiber, if it has any
