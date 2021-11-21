@@ -61,7 +61,9 @@ export type Dependencies = {
 
 // A Fiber is work on a Component that needs to be done or was done. There can
 // be more than one per component.
-// 一个 Fiber 是组件上需要完成或已完成的任务
+// 一个 Fiber 对象代表着一个即将渲染或已渲染的 ReactElement
+// 每个 ReactElement 可能有 0 ~ 2 个 Fiber，Current Fiber 和 WorkInProgress Fiber
+// React.Fragment 没有对应的 Fiber
 export type Fiber = {|
   // These first fields are conceptually members of an Instance. This used to
   // be split into a separate type and intersected with the other Fiber fields,
@@ -74,7 +76,7 @@ export type Fiber = {|
   // minimize the number of objects created during the initial render.
 
   // Tag identifying the type of fiber.
-  // 标记不同的 Fiber 类型，比如原生 DOM 节点、Class Component、Functional Component 等
+  // 表示不同的 Fiber 类型，根据 ReactElement.type 生成，比如原生 DOM 节点、Class Component、Functional Component 等共 25 种
   tag: WorkTag,
 
   // Unique identifier of this child.
@@ -92,7 +94,11 @@ export type Fiber = {|
   type: any,
 
   // The local state associated with this fiber.
-  // 该 Fiber 对象对应的实例（组件实例或 DOM 节点，Functional Component 没有实例，因此没有 stateNode）
+  // 该 Fiber 对象对应的实例
+  //   对于 HostComponent，就是该 Fiber 对应的 DOM 节点
+  //   对于 ClassComponent，就是 Class 实例
+  //   FunctionalComponent 没有实例，因此没有 stateNode
+  //   根节点的 stateNode 指向 FiberRoot
   // 通过该属性就可以维护组件实例上的 state 和 props 更新
   stateNode: any,
 
@@ -119,10 +125,12 @@ export type Fiber = {|
   // 单链表树结构：通过自己的第一个子节点、自己的下一个兄弟节点的连接，构成单向链表树
   child: Fiber | null, // 指向自己的第一个子节点（并不会存所有子节点）
   sibling: Fiber | null, // 指向自己的下一个兄弟节点
-  index: number,
+  index: number, // 该 Fiber 在兄弟节点中的索引，如果是单节点则默认为 0
 
   // The ref last used to attach this node.
   // I'll avoid adding an owner field for prod and model that as functions.
+  // 在 ReactElement 上设置的 ref
+  // 在 reconciler 阶段会将 string 类型的 ref 转成 function 类型
   ref:
     | null
     | (((handle: mixed) => void) & {_stringRef: ?string, ...})
@@ -130,6 +138,7 @@ export type Fiber = {|
 
   // Input is the data coming into process this fiber. Arguments. Props.
   // pendingProps: 即将下一次更新前，节点的新 props
+  // 也就是从 ReactElement 传入的 props，和 memoizedProps 比较可以判断出 props 是否改变
   pendingProps: any, // This type will be more specific once we overload the tag.
   // memoizedProps: 上一次更新结束后，节点的 props
   memoizedProps: any, // The props used to create the output.
@@ -160,21 +169,22 @@ export type Fiber = {|
 
   // Effect
   // 副作用相关
-  flags: Flags,
+  flags: Flags, // 副作用标记，Reconciler 阶段会将所有有 flags 标记的节点加入到「副作用链表」中，等待 commit 阶段去处理
   subtreeFlags: Flags,
   deletions: Array<Fiber> | null,
 
   // Singly linked list fast path to the next fiber with side-effects.
-  nextEffect: Fiber | null,
+  nextEffect: Fiber | null, // 单向链表中，指向下一个有副作用的 Fiber
 
   // The first and last fiber with side-effect within this subtree. This allows
   // us to reuse a slice of the linked list when we reuse the work done within
   // this fiber.
-  firstEffect: Fiber | null,
-  lastEffect: Fiber | null,
+  firstEffect: Fiber | null, // 该 Fiber 子树中，首个有副作用的节点
+  lastEffect: Fiber | null, // 该 Fiber 子树中，最后一个有副作用的节点
 
-  lanes: Lanes,
-  childLanes: Lanes,
+  // 优先级相关
+  lanes: Lanes, // 该 Fiber 节点的优先级，创建 Fiber 时设置
+  childLanes: Lanes, // 子节点的优先级
 
   // This is a pooled version of a Fiber. Every fiber that gets updated will
   // eventually have a pair. There are cases when we can clean up pairs to save
@@ -187,25 +197,30 @@ export type Fiber = {|
   // 是一种双缓冲 Double Buffer 思想
   alternate: Fiber | null,
 
+  // 性能统计相关，需开启 enableProfilerTimer 后才统计
   // Time spent rendering this Fiber and its descendants for the current update.
   // This tells us how well the tree makes use of sCU for memoization.
   // It is reset to 0 each time we render and only updated when we don't bailout.
   // This field is only set when the enableProfilerTimer flag is enabled.
+  // 本次更新中，该节点及其子树所消耗的总时间
   actualDuration?: number,
 
   // If the Fiber is currently active in the "render" phase,
   // This marks the time at which the work began.
   // This field is only set when the enableProfilerTimer flag is enabled.
+  // 该 Fiber 节点开始构建的时间
   actualStartTime?: number,
 
   // Duration of the most recent render time for this Fiber.
   // This value is not updated when we bailout for memoization purposes.
   // This field is only set when the enableProfilerTimer flag is enabled.
+  // 最近一次生成该 Fiber 节点所消耗的时间
   selfBaseDuration?: number,
 
   // Sum of base times for all descendants of this Fiber.
   // This value bubbles up during the "complete" phase.
   // This field is only set when the enableProfilerTimer flag is enabled.
+  // 生成子树所消耗的总时间
   treeBaseDuration?: number,
 
   // Conceptual aliases

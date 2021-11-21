@@ -157,16 +157,22 @@ const ReactElement = function(type, key, ref, self, source, owner, props) {
 
     // Built-in properties that belong on the element
     // 内置属性
-    type: type, // 是用来记录标签名字符串、class component、function component、fragment 这些类型的
-    key: key,
+    // 表示该 ReactElement 的类型：
+    //   如果是标签名字符串，则表示 DOM 节点
+    //   如果是函数，则表示 Functional Component 或 Class Component
+    //   其他 React 节点类型：Fragment、Portal、Context 等
+    type: type,
+    key: key, // ReactElement 的 key 默认为 null
     ref: ref,
     props: props,
 
     // Record the component responsible for creating this element.
     // 记录负责创建该元素的组件
+    // 其实就是记录了创建该 ReactElement 的 Fiber 节点，未与 Fiber 树关联前为 null
     _owner: owner,
   };
 
+  // 用于开发环境下的其他信息
   if (__DEV__) {
     // The validation flag is currently mutative. We put it on
     // an external backing store so that we can freeze the whole object.
