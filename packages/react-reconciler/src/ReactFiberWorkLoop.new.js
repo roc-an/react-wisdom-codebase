@@ -245,6 +245,7 @@ const {
   ReactCurrentActQueue,
 } = ReactSharedInternals;
 
+// 执行上下文
 type ExecutionContext = number;
 
 export const NoContext = /*             */ 0b0000;
@@ -529,7 +530,7 @@ export function scheduleUpdateOnFiber(
       // they were interleaved, for backwards compat reasons.
       if (
         deferRenderPhaseUpdateToNextBatch ||
-        (executionContext & RenderContext) === NoContext
+        (executionContext & RenderContext) === NoContext // executionContext 不包含 RenderContext
       ) {
         workInProgressRootInterleavedUpdatedLanes = mergeLanes(
           workInProgressRootInterleavedUpdatedLanes,
