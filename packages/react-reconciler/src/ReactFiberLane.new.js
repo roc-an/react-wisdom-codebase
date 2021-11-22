@@ -27,6 +27,8 @@ import {clz32} from './clz32';
 
 // Lane values below should be kept in sync with getLabelForLane(), used by react-devtools-scheduling-profiler.
 // If those values are changed that package should be rebuilt and redeployed.
+// 下方的 Lane 值应与 getLabelForLane() 保持同步，它们被使用于 react-devtools-scheduling-profiler
+// 如果这些值改变了，那么该包应该重新构建部署
 
 export const TotalLanes = 31;
 
@@ -80,6 +82,8 @@ export const OffscreenLane: Lane = /*                   */ 0b1000000000000000000
 
 // This function is used for the experimental scheduling profiler (react-devtools-scheduling-profiler)
 // It should be kept in sync with the Lanes values above.
+// 该函数用于实现性的调度分析器（react-devtools-scheduling-profiler）
+// 它应该与上面的 Lane 值保持同步
 export function getLabelForLane(lane: Lane): string | void {
   if (enableSchedulingProfiler) {
     if (lane & SyncLane) {

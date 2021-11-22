@@ -112,30 +112,46 @@ import {
 import {pushInterleavedQueue} from './ReactFiberInterleavedUpdates.new';
 import {setIsStrictModeForDevtools} from './ReactFiberDevToolsHook.new';
 
+// 描述更新的对象
 export type Update<State> = {|
   // TODO: Temporary field. Will remove this by storing a map of
   // transition -> event time on the root.
+  // TODO: 是临时变量。将来会存一个 map，该 map 保存着 transition 到 root 上事件时间的映射
+  // 发起 update 的时间
   eventTime: number,
-  lane: Lane,
+  lane: Lane, // 该 update 的优先级
 
+  // 对应着 4 种更新类型：
+  //   更新 state，UpdateState = 0
+  //   替换 state，ReplaceState = 1
+  //   强制更新，ForceUpdate = 2
+  //   捕获更新，CaptureUpdate = 3，若渲染过程中出错，捕获错误后会生成 CaptureUpdate，用于错误边界 Error Boundaries
   tag: 0 | 1 | 2 | 3,
+  // 要更新的内容，比如 setState 的首个参数（对象或函数）
   payload: any,
-  callback: (() => mixed) | null,
+  callback: (() => mixed) | null, // commit 后会被调用
 
+  // 指向 updateQueue 这个单链表中的下一个 update 的指针，通过它将单链表连接起来
+  // updateQueue 是一个环形单向链表，最后一个 update.next 指向第一个 update
   next: Update<State> | null,
 |};
 
+// 共享队列，setState() 后，新的 update 会添加到该队列中
 export type SharedQueue<State> = {|
-  pending: Update<State> | null,
+  pending: Update<State> | null, // 即将输入的 update 队列
   interleaved: Update<State> | null,
   lanes: Lanes,
 |};
 
+// 更新对象的队列，是一个单向环形链表结构
+// UpdateQueue 作为 Fiber 对象的一个属性，不能脱离 Fiber 独立存在
 export type UpdateQueue<State> = {|
-  baseState: State,
-  firstBaseUpdate: Update<State> | null,
-  lastBaseUpdate: Update<State> | null,
-  shared: SharedQueue<State>,
+  baseState: State, // 基础队列每次更新后的 state，用于下次更新到来时进行 state 计算
+  // 从 firstBaseUpdate 开始遍历，通过 next 属性遍历到下个 update
+  firstBaseUpdate: Update<State> | null, // 基础队列的首个 Update，也就是单链表头节点
+  lastBaseUpdate: Update<State> | null, // 基础队列的最后一个 Update，也就是单链表尾结点
+  shared: SharedQueue<State>, // 共享队列
+  // 存着所有有 callback 的 update 对象，在 commit 后，会依次调用这些回调
   effects: Array<Update<State>> | null,
 |};
 
@@ -160,6 +176,7 @@ if (__DEV__) {
   };
 }
 
+// 初始化更新队列
 export function initializeUpdateQueue<State>(fiber: Fiber): void {
   const queue: UpdateQueue<State> = {
     baseState: fiber.memoizedState,
@@ -172,6 +189,7 @@ export function initializeUpdateQueue<State>(fiber: Fiber): void {
     },
     effects: null,
   };
+  // 将初始化创建好的更新队列挂载到 Fiber 对象的 updateQueue 属性上
   fiber.updateQueue = queue;
 }
 
@@ -194,6 +212,7 @@ export function cloneUpdateQueue<State>(
   }
 }
 
+// 创建更新，返回更新对象
 export function createUpdate(eventTime: number, lane: Lane): Update<*> {
   const update: Update<*> = {
     eventTime,
@@ -208,7 +227,9 @@ export function createUpdate(eventTime: number, lane: Lane): Update<*> {
   return update;
 }
 
+// 将更新加入到传入 Fiber 的 updateQueue 更新队列中
 export function enqueueUpdate<State>(
+  // 要将更新入队的 Fiber 对象，如果是通过 ReactDOM.render() 调用的，那么该 fiber 参数就是 RootFiber
   fiber: Fiber,
   update: Update<State>,
   lane: Lane,
@@ -216,11 +237,18 @@ export function enqueueUpdate<State>(
   const updateQueue = fiber.updateQueue;
   if (updateQueue === null) {
     // Only occurs if the fiber has been unmounted.
+    // 仅当 Fiber 卸载后才会发生 Fiber 的 updateQueue === null
     return;
   }
 
+  // 初始化 updateQueue 后，updateQueue.shared: {
+  //   pending: null,
+  //   interleaved: null,
+  //   lanes: NoLanes,
+  // }
   const sharedQueue: SharedQueue<State> = (updateQueue: any).shared;
 
+  // 区分是否是交替更新
   if (isInterleavedUpdate(fiber, lane)) {
     const interleaved = sharedQueue.interleaved;
     if (interleaved === null) {

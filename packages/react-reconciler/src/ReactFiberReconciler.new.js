@@ -263,9 +263,9 @@ export function updateContainer(
   if (__DEV__) {
     onScheduleRoot(container, element);
   }
-  const current = container.current;
-  const eventTime = requestEventTime();
-  const lane = requestUpdateLane(current);
+  const current = container.current; // Fiber 树的根
+  const eventTime = requestEventTime(); // 获取当前时间戳
+  const lane = requestUpdateLane(current); // 获取本次更新优先级
 
   if (enableSchedulingProfiler) {
     markRenderScheduled(lane);
@@ -319,7 +319,7 @@ export function updateContainer(
   // 将更新加入到 updateQueue 更新队列中
   // 在 React 的一次应用整体更新过程中，一个节点是可以携带多次更新的
   enqueueUpdate(current, update, lane);
-  // 根据任务的优先级进行调度、渲染
+  // 根据任务的优先级进行调度、渲染，开始 Reconciler 的主体流程
   const root = scheduleUpdateOnFiber(current, lane, eventTime);
   if (root !== null) {
     entangleTransitions(root, current, lane);

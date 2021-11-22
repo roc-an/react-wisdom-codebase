@@ -126,7 +126,7 @@ function legacyCreateRootFromDOMContainer(
     false, // isStrictMode
     false, // concurrentUpdatesByDefaultOverride,
   );
-  // 将 container 节点标记为 root
+  // 将 container 节点标记为 root，把 DOM 和 Fiber 关联起来
   // container.__reactContainer$randomKey = root.current
   markContainerAsRoot(root.current, container);
 

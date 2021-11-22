@@ -139,7 +139,7 @@ function FiberNode(
 
   this.ref = null;
 
-  // 作为工作单元的属性
+  // 作为工作单元的属性，存着本次更新的信息
   this.pendingProps = pendingProps;
   this.memoizedProps = null;
   this.updateQueue = null;
@@ -431,11 +431,13 @@ export function resetWorkInProgress(workInProgress: Fiber, renderLanes: Lanes) {
   return workInProgress;
 }
 
+// 创建 HostRootFiber，Fiber 树中所有节点的 mode 与 HostRootFiber 的 mode 一致
 export function createHostRootFiber(
   tag: RootTag,
   isStrictMode: boolean,
   concurrentUpdatesByDefaultOverride: null | boolean,
 ): Fiber {
+  // 3 种 RootTag 决定了创建的 HostRootFiber 的 mode 属性
   let mode;
   if (tag === ConcurrentRoot) {
     mode = ConcurrentMode;
@@ -468,6 +470,7 @@ export function createHostRootFiber(
     mode |= ProfileMode;
   }
 
+  // 创建 Fiber 时，mode 属性由 RootTag 决定
   return createFiber(HostRoot, null, null, mode);
 }
 

@@ -95,7 +95,7 @@ function FiberRootNode(containerInfo, tag, hydrate) {
   }
 }
 
-// 创建 FiberRoot
+// 创建 FiberRoot 和 HostRootFiber
 export function createFiberRoot(
   containerInfo: any, // 应用要挂载至的 DOM 节点
   tag: RootTag,
@@ -104,6 +104,7 @@ export function createFiberRoot(
   isStrictMode: boolean,
   concurrentUpdatesByDefaultOverride: null | boolean,
 ): FiberRoot {
+  // 创建 FiberRoot
   const root: FiberRoot = (new FiberRootNode(containerInfo, tag, hydrate): any);
   if (enableSuspenseCallback) { // 默认是 false
     root.hydrationCallbacks = hydrationCallbacks;
@@ -111,6 +112,7 @@ export function createFiberRoot(
 
   // Cyclic construction. This cheats the type system right now because
   // stateNode is any.
+  // 创建 HostRootFiber，它是 React 应用的首个 Fiber
   const uninitializedFiber = createHostRootFiber(
     tag,
     isStrictMode,
@@ -144,6 +146,7 @@ export function createFiberRoot(
     uninitializedFiber.memoizedState = initialState;
   }
 
+  // 初始化 HostRootFiber 的 updateQueue
   initializeUpdateQueue(uninitializedFiber);
 
   return root;
