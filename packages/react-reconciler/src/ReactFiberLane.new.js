@@ -29,7 +29,7 @@ import {clz32} from './clz32';
 // If those values are changed that package should be rebuilt and redeployed.
 // 下方的 Lane 值应与 getLabelForLane() 保持同步，它们被使用于 react-devtools-scheduling-profiler
 // 如果这些值改变了，那么该包应该重新构建部署
-
+// JS 中位运算会转成 32 位二进制，这里的变量都是 31 位，是因为最高位是符号位，非符号位才参与运算
 export const TotalLanes = 31;
 
 export const NoLanes: Lanes = /*                        */ 0b0000000000000000000000000000000;
@@ -130,6 +130,7 @@ export const NoTimestamp = -1;
 let nextTransitionLane: Lane = TransitionLane1;
 let nextRetryLane: Lane = RetryLane1;
 
+// 获取最高优先级多任务车道
 function getHighestPriorityLanes(lanes: Lanes | Lane): Lanes {
   switch (getHighestPriorityLane(lanes)) {
     case SyncLane:
@@ -182,6 +183,7 @@ function getHighestPriorityLanes(lanes: Lanes | Lane): Lanes {
         );
       }
       // This shouldn't be reachable, but as a fallback, return the entire bitmask.
+      // 不应该到达这里
       return lanes;
   }
 }
@@ -504,6 +506,12 @@ export function claimNextRetryLane(): Lane {
   return lane;
 }
 
+// 从 lanes 中分离出最高优先级单任务车道
+// 假设 lanes 为      0b0000000000000000000000000011100
+// 那么其反码为        0b1111111111111111111111111100011
+// 补码为             0b1111111111111111111111111100100，也就是 -lanes
+// lanes & -lanes 为 0b0000000000000000000000000000100
+// lanes & -lanes 是所有位中最右边的 1 所表示的数，数越小优先级越高，所以它是最高优先级车道
 export function getHighestPriorityLane(lanes: Lanes): Lane {
   return lanes & -lanes;
 }
