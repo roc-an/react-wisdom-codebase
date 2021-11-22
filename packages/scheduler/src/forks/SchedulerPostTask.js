@@ -52,6 +52,17 @@ export const unstable_now = getCurrentTime;
 // thread, like user events. By default, it yields multiple times per frame.
 // It does not attempt to align with frame boundaries, since most tasks don't
 // need to be frame aligned; for those that do, use requestAnimationFrame.
+// 如果主线程上有其他任务要进行（如用户事件），那么调度将周期性地发生
+// 默认一帧内将发生多次调度
+// 调度并不会发生在每一帧的边界，因为绝大多数任务无需与帧对齐。如果要对齐的话应该使用 requestAnimationFrame
+
+// 由于浏览器的 JS 线程与 GUI 线程互斥，因此执行 JS 和进行布局、绘制不能同时进行。如果要执行 JS 过久，就会阻塞页面每一帧的绘制
+// 在浏览器的每一帧时间中，预留一些时间给 JS 线程，React 利用这些时间完成更新，而不是让 JS 完全占用了这一帧的时间，因为可能还有其他事情要做
+// 每一帧预留的 JS 处理时间就是 yieldInterval，默认是 5ms
+// 如果预留时间内没有完成 JS 处理，那么 React 会将线程控制权交还给浏览器让它渲染 UI
+// 等到了下一帧，React 再用 yieldInterval 时间继续处理之前中断的任务
+// 这种将长任务拆分到每一帧的小任务中去执行而不阻塞 UI 渲染的思想，叫「时间切片（Time Slice）」
+// 时间切片的核心思想是：将同步更新变为可中断的异步更新
 const yieldInterval = 5;
 let deadline = 0;
 
