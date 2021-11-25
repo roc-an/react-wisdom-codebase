@@ -72,8 +72,9 @@ var LOW_PRIORITY_TIMEOUT = 10000;
 var IDLE_PRIORITY_TIMEOUT = maxSigned31BitInt;
 
 // Tasks are stored on a min heap
+// 任务被存储在任务队列中，任务队列是一个小顶堆数组
 var taskQueue = [];
-var timerQueue = [];
+var timerQueue = []; // 目前是保留功能，预留给延时任务使用
 
 // Incrementing id counter. Used to maintain insertion order.
 // 递增的 ID 计数器，用于维护插入顺序
@@ -153,6 +154,7 @@ function flushWork(hasTimeRemaining, initialTime) {
     markSchedulerUnsuspended(initialTime);
   }
 
+  // 设置相关标记
   // We'll need a host callback the next time work is scheduled.
   isHostCallbackScheduled = false;
   if (isHostTimeoutScheduled) {
@@ -166,6 +168,7 @@ function flushWork(hasTimeRemaining, initialTime) {
   try {
     if (enableProfiling) {
       try {
+        // 循环消费任务队列
         return workLoop(hasTimeRemaining, initialTime);
       } catch (error) {
         if (currentTask !== null) {
@@ -180,6 +183,7 @@ function flushWork(hasTimeRemaining, initialTime) {
       return workLoop(hasTimeRemaining, initialTime);
     }
   } finally {
+    // 还原标记
     currentTask = null;
     currentPriorityLevel = previousPriorityLevel;
     isPerformingWork = false;
@@ -190,10 +194,11 @@ function flushWork(hasTimeRemaining, initialTime) {
   }
 }
 
+// 任务调度循环：消费任务队列
 function workLoop(hasTimeRemaining, initialTime) {
-  let currentTime = initialTime;
+  let currentTime = initialTime; // 保存当前时间用于判断任务是否过期
   advanceTimers(currentTime);
-  currentTask = peek(taskQueue);
+  currentTask = peek(taskQueue); // 取当前任务队列中的最高优先级任务（最小二叉堆的根节点）
   while (
     currentTask !== null &&
     !(enableSchedulerDebugging && isSchedulerPaused)
@@ -203,6 +208,7 @@ function workLoop(hasTimeRemaining, initialTime) {
       (!hasTimeRemaining || shouldYieldToHost())
     ) {
       // This currentTask hasn't expired, and we've reached the deadline.
+      // 虽然任务还没过期，但是执行时间到达了限制，停止并让出主线程
       break;
     }
     const callback = currentTask.callback;
@@ -213,8 +219,10 @@ function workLoop(hasTimeRemaining, initialTime) {
       if (enableProfiling) {
         markTaskRun(currentTask, currentTime);
       }
+      // 执行回调
       const continuationCallback = callback(didUserCallbackTimeout);
       currentTime = getCurrentTime();
+      // 回调完成，如果有派生的回调（执行回调后又得到回调，比如中断了渲染），那么保留挂在 currentTask 上
       if (typeof continuationCallback === 'function') {
         currentTask.callback = continuationCallback;
         if (enableProfiling) {
@@ -225,12 +233,14 @@ function workLoop(hasTimeRemaining, initialTime) {
           markTaskCompleted(currentTask, currentTime);
           currentTask.isQueued = false;
         }
+        // 将执行完的任务移出队列
         if (currentTask === peek(taskQueue)) {
           pop(taskQueue);
         }
       }
       advanceTimers(currentTime);
     } else {
+      // 如果任务被取消，currentTask.callback === null，那么将任务移出队列
       pop(taskQueue);
     }
     currentTask = peek(taskQueue);
@@ -309,10 +319,21 @@ function unstable_wrapCallback(callback) {
   };
 }
 
+// 主要职责：
+//   1. 设置延时执行任务
+//   2. 设置过期时间
+//   3. 创建任务对象
+//   4. 请求及时或延时回调的调度
+//   5. return 这次调用新创建的任务对象
+// options: {
+//   delay: 延迟多少 ms 后执行
+// }
 function unstable_scheduleCallback(priorityLevel, callback, options) {
+  // 获取当前时间戳
   var currentTime = getCurrentTime();
 
   var startTime;
+  // 延时执行
   if (typeof options === 'object' && options !== null) {
     var delay = options.delay;
     if (typeof delay === 'number' && delay > 0) {
@@ -324,6 +345,7 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
     startTime = currentTime;
   }
 
+  // 根据任务优先级，设置过期时间
   var timeout;
   switch (priorityLevel) {
     case ImmediatePriority:
@@ -346,15 +368,15 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
 
   var expirationTime = startTime + timeout;
 
-  // Task 对象
+  // 创建 Task 对象
   // Task 队列是一个小顶堆数组，优先级最高的 Task 在堆的最顶端
   var newTask = {
-    id: taskIdCounter++, // 唯一标识
+    id: taskIdCounter++, // 唯一标识，每次创建时自增
     callback, // Task 最核心字段，指向 react-reconciler 提供的回调
     priorityLevel, // 优先级
     startTime, // Task 开始时间（创建时间 + 延迟时间）时间戳
     expirationTime, // 过期时间
-    sortIndex: -1, // 控制 Task 在队列中的次序，值越小越靠前
+    sortIndex: -1, // 控制 Task 在队列中的次序，值越小越靠前。用于小顶堆调整节点位置
   };
   if (enableProfiling) {
     newTask.isQueued = false;
@@ -362,6 +384,7 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
 
   if (startTime > currentTime) {
     // This is a delayed task.
+    // 这是一个延时执行的任务
     newTask.sortIndex = startTime;
     push(timerQueue, newTask);
     if (peek(taskQueue) === null && newTask === peek(timerQueue)) {
@@ -376,14 +399,16 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
       requestHostTimeout(handleTimeout, startTime - currentTime);
     }
   } else {
-    newTask.sortIndex = expirationTime;
-    push(taskQueue, newTask);
+    newTask.sortIndex = expirationTime; // 任务的次序就是过期时间，所以过期时间越近，优先级越高
+    push(taskQueue, newTask); // 向任务队列中添加任务（添加到小顶堆最末的叶子节点，然后上浮）
     if (enableProfiling) {
       markTaskStart(newTask, currentTime);
       newTask.isQueued = true;
     }
     // Schedule a host callback, if needed. If we're already performing work,
     // wait until the next time we yield.
+    // 请求及时回调
+    // 如果有正在进行的任务，那么等到下次让出控制权给主线程时再执行
     if (!isHostCallbackScheduled && !isPerformingWork) {
       isHostCallbackScheduled = true;
       requestHostCallback(flushWork);
