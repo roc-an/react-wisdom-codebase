@@ -213,6 +213,8 @@ export function cloneUpdateQueue<State>(
 }
 
 // 创建更新，返回更新对象
+// 应用初始化、组件更新都会导致 createUpdate() 创建 update 对象
+// 一个 update 的优先级 Lane 是由外界传入的
 export function createUpdate(eventTime: number, lane: Lane): Update<*> {
   const update: Update<*> = {
     eventTime,

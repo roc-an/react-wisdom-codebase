@@ -252,6 +252,7 @@ export function resolveLazyComponentTag(Component: Function): WorkTag {
 }
 
 // This is used to create an alternate fiber to do work on.
+// 创建一个 workInProgress 的 alternate Fiber
 export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
   let workInProgress = current.alternate;
   if (workInProgress === null) {
@@ -268,6 +269,7 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
     );
     workInProgress.elementType = current.elementType;
     workInProgress.type = current.type;
+    // workInProgress Fiber 节点的 stateNode 复用了 current.stateNode
     workInProgress.stateNode = current.stateNode;
 
     if (__DEV__) {

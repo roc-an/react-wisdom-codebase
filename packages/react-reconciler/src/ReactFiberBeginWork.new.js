@@ -1304,6 +1304,7 @@ function updateHostRoot(current, workInProgress, renderLanes) {
   const prevState = workInProgress.memoizedState;
   const prevChildren = prevState.element;
   cloneUpdateQueue(current, workInProgress);
+  // 遍历 updateQueue.shared.pending，提取有足够优先级的 update 对象，计算出最终状态 workInProgress.memoizedState
   processUpdateQueue(workInProgress, nextProps, null, renderLanes);
   const nextState = workInProgress.memoizedState;
 
@@ -1321,6 +1322,7 @@ function updateHostRoot(current, workInProgress, renderLanes) {
 
   // Caution: React DevTools currently depends on this property
   // being called "element".
+  // 获取下级 ReactElement 对象
   const nextChildren = nextState.element;
   if (nextChildren === prevChildren) {
     resetHydrationState();
@@ -1368,6 +1370,7 @@ function updateHostRoot(current, workInProgress, renderLanes) {
   } else {
     // Otherwise reset hydration state in case we aborted and resumed another
     // root.
+    // 根据 ReactElement 对象，生成子 Fiber 节点
     reconcileChildren(current, workInProgress, nextChildren, renderLanes);
     resetHydrationState();
   }
@@ -1385,10 +1388,12 @@ function updateHostComponent(
     tryToClaimNextHydratableInstance(workInProgress);
   }
 
+  // 状态计算，由于 HostComponent 是无状态组件，所以仅收集 nextProps 即可，它没有 memoizedState
   const type = workInProgress.type;
   const nextProps = workInProgress.pendingProps;
   const prevProps = current !== null ? current.memoizedProps : null;
 
+  // 获取下级 ReactElement 对象
   let nextChildren = nextProps.children;
   const isDirectTextChild = shouldSetTextContent(type, nextProps);
 
@@ -1397,6 +1402,7 @@ function updateHostComponent(
     // case. We won't handle it as a reified child. We will instead handle
     // this in the host environment that also has access to this prop. That
     // avoids allocating another HostText fiber and traversing it.
+    // 如果子节点只有一个文本节点，不用再创建一个 HostText 类型的 Fiber
     nextChildren = null;
   } else if (prevProps !== null && shouldSetTextContent(type, prevProps)) {
     // If we're switching from a direct text child to a normal child, or to
@@ -1405,6 +1411,7 @@ function updateHostComponent(
   }
 
   markRef(current, workInProgress);
+  // 根据 ReactElement 生成子 Fiber 节点
   reconcileChildren(current, workInProgress, nextChildren, renderLanes);
   return workInProgress.child;
 }
@@ -3642,6 +3649,7 @@ function attemptEarlyBailoutIfNoScheduledUpdate(
   return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
 }
 
+// 构造 Fiber 节点的探寻阶段
 function beginWork(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -3735,8 +3743,14 @@ function beginWork(
   // the update queue. However, there's an exception: SimpleMemoComponent
   // sometimes bails out later in the begin phase. This indicates that we should
   // move this assignment out of the common path and into each branch.
+  // 进入 begin 阶段前，清空 Pending 状态的 update 优先级
   workInProgress.lanes = NoLanes;
 
+  // 区分不同的 workInProgress Fiber 类型，用不同的 updateXXX 方法派生子节点
+  // 这些 updateXXX 函数的主要职责：
+  //   1. 根据 fiber.pendingProps、fiber.updateQueue 等输入状态，计算出 fiber.memoizedState 作为输出状态
+  //   2. 获取下级 ReactElement 对象，根据不同类型构建实例、设置 fiber.flags 等
+  //   3. 调用 reconcileChildren() 生成子节点 Fiber
   switch (workInProgress.tag) {
     case IndeterminateComponent: {
       return mountIndeterminateComponent(
@@ -3785,8 +3799,10 @@ function beginWork(
         renderLanes,
       );
     }
+    // Fiber 树的根节点是 HostRootFiber，该 Case 是首次进行 beginWork
     case HostRoot:
       return updateHostRoot(current, workInProgress, renderLanes);
+    // 普通 DOM 标签类型节点，如 div、p、h1 等
     case HostComponent:
       return updateHostComponent(current, workInProgress, renderLanes);
     case HostText:

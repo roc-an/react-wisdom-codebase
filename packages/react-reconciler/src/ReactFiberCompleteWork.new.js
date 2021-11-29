@@ -817,6 +817,7 @@ export function completeSuspendedOffscreenHostContainer(
   bubbleProperties(workInProgress);
 }
 
+// 处理 Fiber
 function completeWork(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -943,6 +944,7 @@ function completeWork(
             markUpdate(workInProgress);
           }
         } else {
+          // 创建 DOM 对象
           const instance = createInstance(
             type,
             newProps,
@@ -951,14 +953,16 @@ function completeWork(
             workInProgress,
           );
 
+          // 把子树中的 DOM 对象 append 到本节点 DOM 对象
           appendAllChildren(instance, workInProgress, false, false);
-
+          // 设置 stateNode 属性, 指向 DOM 对象
           workInProgress.stateNode = instance;
 
           // Certain renderers require commit-time effects for initial mount.
           // (eg DOM renderer supports auto-focus for certain elements).
           // Make sure such renderers get scheduled for later work.
           if (
+            // 设置 DOM 对象的属性, 绑定事件等
             finalizeInitialChildren(
               instance,
               type,
@@ -967,12 +971,14 @@ function completeWork(
               currentHostContext,
             )
           ) {
+            // 设置 fiber.flags 标记（Update）
             markUpdate(workInProgress);
           }
         }
 
         if (workInProgress.ref !== null) {
           // If there is a ref on a host node we need to schedule a callback
+          // 设置 fiber.flags 标记（Ref）
           markRef(workInProgress);
         }
       }

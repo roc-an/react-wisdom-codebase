@@ -190,6 +190,7 @@ function getHighestPriorityLanes(lanes: Lanes | Lane): Lanes {
   }
 }
 
+// 在 render 前决策出本次 render 的优先级
 export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
   // Early bailout if there's no pending work left.
   const pendingLanes = root.pendingLanes;

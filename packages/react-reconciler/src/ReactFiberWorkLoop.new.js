@@ -245,7 +245,15 @@ const {
   ReactCurrentActQueue,
 } = ReactSharedInternals;
 
+// 栈帧管理
+// 下面这些全局变量，代表了当前 Fiber 树构造的活动记录
+// 由于调度支持时间切片，当 Fiber 树构造过程被打断后，如果要继续之前的构造，还原进度，就要靠这些全局变量
+// 每次 Fiber 树构造是一个独立的过程，需要独立的一组全局变量，每个独立的过程是一个栈帧 stack
+
 // 执行上下文
+// 在 render 过程中，每个阶段都会改变 executionContext：
+//   render 之前：executionContext |= RenderContext
+//   commit 之前：executionContext |= CommitContext
 type ExecutionContext = number;
 
 export const NoContext = /*             */ 0b0000;
@@ -263,13 +271,16 @@ const RootSuspendedWithDelay = 4;
 const RootCompleted = 5;
 
 // Describes where we are in the React execution stack
-// 调用上下文，描述正处于 React 执行栈中的哪
+// 调用上下文，描述正处于 React 执行栈中的哪。是二进制数，通过位运算操作
 let executionContext: ExecutionContext = NoContext;
 // The root we're working on
+// 正在处理中的 FiberRoot
 let workInProgressRoot: FiberRoot | null = null;
 // The fiber we're working on
+// 正在构造的 Fiber 节点
 let workInProgress: Fiber | null = null;
 // The lanes we're rendering
+// 正在渲染中的车道组合
 let workInProgressRootRenderLanes: Lanes = NoLanes;
 
 // Stack that allows components to change the render lanes for its subtree
@@ -280,24 +291,33 @@ let workInProgressRootRenderLanes: Lanes = NoLanes;
 //
 // Most things in the work loop should deal with workInProgressRootRenderLanes.
 // Most things in begin/complete phases should deal with subtreeRenderLanes.
+// 在工作循环中大多使用 workInProgressRootRenderLanes
+// 在 begin 和 complete 阶段大多使用 subtreeRenderLanes
 export let subtreeRenderLanes: Lanes = NoLanes;
+// 一个栈结构，存储当前节点的 subtreeRenderLanes
 const subtreeRenderLanesCursor: StackCursor<Lanes> = createCursor(NoLanes);
 
 // Whether to root completed, errored, suspended, etc.
+// Fiber 构造完成后，Root 节点的状态：completed, errored, suspended, etc
 let workInProgressRootExitStatus: RootExitStatus = RootIncomplete;
 // A fatal error, if one is thrown
+// 可能抛出的致命错误
 let workInProgressRootFatalError: mixed = null;
 // "Included" lanes refer to lanes that were worked on during this render. It's
 // slightly different than `renderLanes` because `renderLanes` can change as you
 // enter and exit an Offscreen tree. This value is the combination of all render
 // lanes for the entire render phase.
+// 在整个 render 接种中使用到的所有 Lanes
 let workInProgressRootIncludedLanes: Lanes = NoLanes;
 // The work left over by components that were visited during this render. Only
 // includes unprocessed updates, not work in bailed out children.
+// 在渲染期间由于优先级不够而被跳过的 Lanes。仅包括未处理的更新
 let workInProgressRootSkippedLanes: Lanes = NoLanes;
 // Lanes that were updated (in an interleaved event) during this render.
+// 在 render 期间被修改过的 Lanes（in an interleaved event）
 let workInProgressRootInterleavedUpdatedLanes: Lanes = NoLanes;
 // Lanes that were updated during the render phase (*not* an interleaved event).
+// 在 render 期间被修改过的 Lanes（*not* an interleaved event）
 let workInProgressRootRenderPhaseUpdatedLanes: Lanes = NoLanes;
 // Lanes that were pinged (in an interleaved event) during this render.
 let workInProgressRootPingedLanes: Lanes = NoLanes;
@@ -348,6 +368,8 @@ let nestedPassiveUpdateCount: number = 0;
 // If two updates are scheduled within the same event, we should treat their
 // event times as simultaneous, even if the actual clock time has advanced
 // between the first and second call.
+// 如果两个更新在同一个事件中被调度，会认为它们的事件时间是相同的。尽管实际调用时间是有区别的
+// 发起更新的时间
 let currentEventTime: number = NoTimestamp;
 let currentEventTransitionLane: Lanes = NoLanes;
 
@@ -375,6 +397,7 @@ export function getCurrentTime() {
   return now();
 }
 
+// 获取一个 update 的优先级
 export function requestUpdateLane(fiber: Fiber): Lane {
   // Special cases
   const mode = fiber.mode;
@@ -399,6 +422,7 @@ export function requestUpdateLane(fiber: Fiber): Lane {
 
   const isTransition = requestCurrentTransition() !== NoTransition;
   if (isTransition) {
+    // 处于 Suspense 过程中
     if (
       __DEV__ &&
       warnOnSubscriptionInsideStartTransition &&
@@ -455,7 +479,7 @@ function requestRetryLane(fiber: Fiber) {
   return claimNextRetryLane();
 }
 
-// 该函数是 Reconciler 模块输入链路的毕竟之路，用于接收输入
+// 该函数是 Reconciler 模块输入链路的必经之路，用于接收输入
 // 在 react-reconciler 对外暴露的 API 中，只要涉及到改变 Fiber（无论是首次渲染或是后续更新），最后都会调用到它
 export function scheduleUpdateOnFiber(
   fiber: Fiber,
@@ -551,8 +575,8 @@ export function scheduleUpdateOnFiber(
     // 注册调度任务，经过 Scheduler 的调度，间接构造 Fiber
     ensureRootIsScheduled(root, eventTime);
     if (
-      lane === SyncLane &&
-      executionContext === NoContext &&
+      lane === SyncLane && // Legacy 或 Blocking 模式
+      executionContext === NoContext && // 判断执行上下文为空
       (fiber.mode & ConcurrentMode) === NoMode &&
       // Treat `act` as if it's inside `batchedUpdates`, even in legacy mode.
       !(__DEV__ && ReactCurrentActQueue.isBatchingLegacy)
@@ -1134,7 +1158,7 @@ function performSyncWorkOnRoot(root) {
 
   flushPassiveEffects();
 
-  let lanes = getNextLanes(root, NoLanes);
+  let lanes = getNextLanes(root, NoLanes); // 获取本次 render 的优先级
   if (!includesSomeLane(lanes, SyncLane)) {
     // There's no remaining sync work left.
     ensureRootIsScheduled(root, now());
@@ -1171,6 +1195,7 @@ function performSyncWorkOnRoot(root) {
   const finishedWork: Fiber = (root.current.alternate: any);
   root.finishedWork = finishedWork;
   root.finishedLanes = lanes;
+  // 进入 commit 阶段
   commitRoot(root);
 
   // Before exiting, make sure there's a callback scheduled for the next
@@ -1339,7 +1364,11 @@ export function popRenderLanes(fiber: Fiber) {
   popFromStack(subtreeRenderLanesCursor, fiber);
 }
 
+// 刷新帧栈：
+//   1. 重置 FiberRoot 上的属性
+//   2. 重置 Fiber 树构造的工作循环过程中的全局变量
 function prepareFreshStack(root: FiberRoot, lanes: Lanes) {
+  // 重置 FiberRoot 上的属性
   root.finishedWork = null;
   root.finishedLanes = NoLanes;
 
@@ -1352,6 +1381,7 @@ function prepareFreshStack(root: FiberRoot, lanes: Lanes) {
     cancelTimeout(timeoutHandle);
   }
 
+  // 重置 Fiber 树构造的工作循环过程中的全局变量
   if (workInProgress !== null) {
     let interruptedWork = workInProgress.return;
     while (interruptedWork !== null) {
@@ -1536,13 +1566,15 @@ export function renderHasNotSuspendedYet(): boolean {
   return workInProgressRootExitStatus === RootIncomplete;
 }
 
+// 从 root 开始，自上而下地更新
 function renderRootSync(root: FiberRoot, lanes: Lanes) {
   const prevExecutionContext = executionContext;
-  executionContext |= RenderContext;
+  executionContext |= RenderContext; // 将全局上下文标记为 RenderContext
   const prevDispatcher = pushDispatcher();
 
   // If the root or lanes have changed, throw out the existing stack
   // and prepare a fresh one. Otherwise we'll continue where we left off.
+  // 如果 FiberRoot 或者 update.lanes 改变了，都会刷新栈帧，丢弃上一次渲染进度
   if (workInProgressRoot !== root || workInProgressRootRenderLanes !== lanes) {
     if (enableUpdaterTracking) {
       if (isDevToolsPresent) {
@@ -1560,7 +1592,7 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
       }
     }
 
-    prepareFreshStack(root, lanes);
+    prepareFreshStack(root, lanes); // 刷新帧栈
   }
 
   if (__DEV__) {
@@ -1573,6 +1605,7 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
     markRenderStarted(lanes);
   }
 
+  // Fiber 树构造的工作循环
   do {
     try {
       workLoopSync();
@@ -1605,6 +1638,7 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
   }
 
   // Set this to null to indicate there's no in-progress render.
+  // 重置全局变量，表明 render 结束
   workInProgressRoot = null;
   workInProgressRootRenderLanes = NoLanes;
 
@@ -1615,6 +1649,7 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
 /** @noinline */
 function workLoopSync() {
   // Already timed out, so perform work without checking if we need to yield.
+  // 已经超时了，不需要检查是否需要中断让出控制权给主线程，干就完事了
   while (workInProgress !== null) {
     performUnitOfWork(workInProgress);
   }
@@ -1627,6 +1662,7 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
 
   // If the root or lanes have changed, throw out the existing stack
   // and prepare a fresh one. Otherwise we'll continue where we left off.
+  // 如果 FiberRoot 或者 update.lanes 改变了，那么丢弃现有的栈帧就好，准备一个新的。不然就会在已经被舍弃的地方继续构造 Fiber 树
   if (workInProgressRoot !== root || workInProgressRootRenderLanes !== lanes) {
     if (enableUpdaterTracking) {
       if (isDevToolsPresent) {
@@ -1645,6 +1681,7 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
     }
 
     resetRenderTimer();
+    // 刷新帧栈，丢弃上一次的构造进度
     prepareFreshStack(root, lanes);
   }
 
@@ -1700,20 +1737,32 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
 }
 
 /** @noinline */
+// workLoopConcurrent() 相比 workLoopSync()，只是多出了一个 shouldYield() 判断的中断机制
+// 这个中断机制实现了「可中断渲染」和「时间切片」
 function workLoopConcurrent() {
   // Perform work until Scheduler asks us to yield
+  // 一直工作，直到 Scheduler 要求让出控制权给主线程
   while (workInProgress !== null && !shouldYield()) {
     performUnitOfWork(workInProgress);
   }
 }
 
+// 进行 Fiber 树构造工作的一个小单元
+// unitOfWork: 就是被传入的 workInProgress，即正在构造的 Fiber
+// workInProgress 和 current 都视为指针
+// 整个 Fiber 树构造是一个深度优先遍历（DFS）
+// DFS 过程中，每个 Fiber 经历 2 个阶段：
+//   1. 探寻阶段 beginWork
+//   2. 回溯阶段 completeWork：处理 beginWork 阶段创建的 Fiber
 function performUnitOfWork(unitOfWork: Fiber): void {
   // The current, flushed, state of this fiber is the alternate. Ideally
   // nothing should rely on this, but relying on it here means that we don't
   // need an additional field on the work in progress.
+  // Fiber 节点的 current、flushed、state 是用于双缓冲的候补属性。
   const current = unitOfWork.alternate;
   setCurrentDebugFiberInDEV(unitOfWork);
 
+  // Fiber 进入 beginWork 探寻阶段
   let next;
   if (enableProfilerTimer && (unitOfWork.mode & ProfileMode) !== NoMode) {
     startProfilerTimer(unitOfWork);
@@ -1727,14 +1776,17 @@ function performUnitOfWork(unitOfWork: Fiber): void {
   unitOfWork.memoizedProps = unitOfWork.pendingProps;
   if (next === null) {
     // If this doesn't spawn new work, complete the current work.
+    // 如果没有派生出新节点，则进入 completeWork 阶段
     completeUnitOfWork(unitOfWork);
   } else {
+    // 如果派生了新节点，那么 workInProgress 正在构造的节点指针指向这个派生的新节点
     workInProgress = next;
   }
 
   ReactCurrentOwner.current = null;
 }
 
+// completeWork 阶段
 function completeUnitOfWork(unitOfWork: Fiber): void {
   // Attempt to complete the current unit of work, then move to the next
   // sibling. If there are no more siblings, return to the parent fiber.
@@ -1754,6 +1806,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
         !enableProfilerTimer ||
         (completedWork.mode & ProfileMode) === NoMode
       ) {
+        // 处理 Fiber，会调用渲染器（调用 react-dom，关联 Fiber 和 DOM，绑定事件等）
         next = completeWork(current, completedWork, subtreeRenderLanes);
       } else {
         startProfilerTimer(completedWork);
@@ -1765,6 +1818,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
 
       if (next !== null) {
         // Completing this fiber spawned new work. Work on that next.
+        // 如果派生出其他子节点，回到 beginWork 阶段进行处理
         workInProgress = next;
         return;
       }
@@ -1814,16 +1868,19 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
     const siblingFiber = completedWork.sibling;
     if (siblingFiber !== null) {
       // If there is more work to do in this returnFiber, do that next.
+      // 如果有兄弟节点，返回后继续进入 beginWork 阶段
       workInProgress = siblingFiber;
       return;
     }
     // Otherwise, return to the parent
+    // 移动指针，指向下一个节点
     completedWork = returnFiber;
     // Update the next thing we're working on in case something throws.
     workInProgress = completedWork;
   } while (completedWork !== null);
 
   // We've reached the root.
+  // 已经回溯到根节点，设置 workInProgressRootExitStatus = RootCompleted
   if (workInProgressRootExitStatus === RootIncomplete) {
     workInProgressRootExitStatus = RootCompleted;
   }
