@@ -141,8 +141,8 @@ if (__DEV__) {
 // FunctionalComponent Fiber 的 memoizedState 会指向 Hook，所以 Hook 不能脱离 Fiber 独立存在
 export type Hook = {|
   memoizedState: any, // 缓存的 state，用于输出最终的 Fiber 树
-  baseState: any, // 基础 state，当 queue 更新后，它也会更新
-  baseQueue: Update<any, any> | null, // 基础 state 队列，在 Reconciler 阶段会帮助状态合并
+  baseState: any, // baseQueue 中所有 update 对象合并之后的状态
+  baseQueue: Update<any, any> | null, // Update 的环形链表
   queue: any, // 指向一个 Update 队列
   next: Hook | null, // 指向该 FunctionalComponent 的下一个 Hook 对象，所以多个 Hook 间也形成了单向链表
 |};
@@ -175,27 +175,34 @@ type BasicStateAction<S> = (S => S) | S;
 type Dispatch<A> = A => void;
 
 // These are set right before calling the component.
-let renderLanes: Lanes = NoLanes;
+let renderLanes: Lanes = NoLanes; // 渲染优先级
 // The work-in-progress fiber. I've named it differently to distinguish it from
 // the work-in-progress hook.
+// 当前正在构造的 Fiber。为了与当前 Hook 区分，所以这样命名
 let currentlyRenderingFiber: Fiber = (null: any);
 
 // Hooks are stored as a linked list on the fiber's memoizedState field. The
 // current hook list is the list that belongs to the current fiber. The
 // work-in-progress hook list is a new list that will be added to the
 // work-in-progress fiber.
-let currentHook: Hook | null = null;
-let workInProgressHook: Hook | null = null;
+// Hooks 作为单链表存储于 Fiber 的 memoizedState 字段上。
+// currentHook 链表属于当前 fiber
+// workInProgressHook 链表是一个新的链表，将被添加到 workInProgress 的 Fiber 节点上
+let currentHook: Hook | null = null; // currentHook = Fiber(current).memoizedState
+let workInProgressHook: Hook | null = null; // workInProgressHook = Fiber(workInProgress).memoizedState
 
 // Whether an update was scheduled at any point during the render phase. This
 // does not get reset if we do another render pass; only when we're completely
 // finished evaluating this component. This is an optimization so we know
 // whether we need to clear render phase updates after a throw.
+// 在渲染阶段是否有更新被调度。仅当函数组件的函数执行完毕后才会被重置
+// 当渲染出现异常时，通过该变量可以判断是否需要清空更新，因此这是一个优化手段
 let didScheduleRenderPhaseUpdate: boolean = false;
 // Where an update was scheduled only during the current render pass. This
 // gets reset after each attempt.
 // TODO: Maybe there's some way to consolidate this with
 // `didScheduleRenderPhaseUpdate`. Or with `numberOfReRenders`.
+// 在本次函数组件的函数执行过程中，是否发起了更新。每次调用函数都会重置
 let didScheduleRenderPhaseUpdateDuringThisPass: boolean = false;
 // Counts the number of useId hooks in this component.
 let localIdCounter: number = 0;
@@ -204,6 +211,7 @@ let localIdCounter: number = 0;
 // render attempts.
 let globalClientIdCounter: number = 0;
 
+// 在一次函数组件的函数执行过程中，重新发起更新的最大次数
 const RE_RENDER_LIMIT = 25;
 
 // In DEV, this is the name of the currently executing primitive hook
@@ -365,6 +373,10 @@ function areHookInputsEqual(
   return true;
 }
 
+// 核心流程：
+// 1. 调用函数组件函数前：设置全局变量，标记渲染优先级和当前 Fiber，清除当前 Fiber 的遗留状态
+// 2. 调用函数组件函数：构造 Hooks 链表，生成子级 ReactElement 对象（children）
+// 3. 调用函数组件函数后：重置全局变量，return children
 export function renderWithHooks<Props, SecondArg>(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -373,8 +385,9 @@ export function renderWithHooks<Props, SecondArg>(
   secondArg: SecondArg,
   nextRenderLanes: Lanes,
 ): any {
-  renderLanes = nextRenderLanes;
-  currentlyRenderingFiber = workInProgress;
+  // 设置全局变量
+  renderLanes = nextRenderLanes; // 当前渲染优先级
+  currentlyRenderingFiber = workInProgress; // 当前 Fiber 节点，即函数组件对应的 Fiber 节点
 
   if (__DEV__) {
     hookTypesDev =
@@ -387,6 +400,7 @@ export function renderWithHooks<Props, SecondArg>(
       current !== null && current.type !== workInProgress.type;
   }
 
+  // 清空当前 Fiber 的遗留状态
   workInProgress.memoizedState = null;
   workInProgress.updateQueue = null;
   workInProgress.lanes = NoLanes;
@@ -425,6 +439,7 @@ export function renderWithHooks<Props, SecondArg>(
         : HooksDispatcherOnUpdate;
   }
 
+  // 调用函数组件的函数
   let children = Component(props, secondArg);
 
   // Check if there was a render phase update
@@ -482,6 +497,7 @@ export function renderWithHooks<Props, SecondArg>(
   const didRenderTooFewHooks =
     currentHook !== null && currentHook.next !== null;
 
+  // 还原被修改的全局变量，不影响下一次调用
   renderLanes = NoLanes;
   currentlyRenderingFiber = (null: any);
 
@@ -627,6 +643,7 @@ export function resetHooksAfterThrow(): void {
   localIdCounter = 0;
 }
 
+// 创建 Hook 对象，并挂载到 Fiber 的 memoizedState 字段上，以链表形式存储
 function mountWorkInProgressHook(): Hook {
   const hook: Hook = {
     memoizedState: null,
@@ -640,20 +657,31 @@ function mountWorkInProgressHook(): Hook {
 
   if (workInProgressHook === null) {
     // This is the first hook in the list
+    // 链表中首个 Hook，挂载到当前正在构造的 Fiber 的 memoizedState 字段上
     currentlyRenderingFiber.memoizedState = workInProgressHook = hook;
   } else {
     // Append to the end of the list
+    // 如果不是链表中首个 Hook，那么添加至链表尾
     workInProgressHook = workInProgressHook.next = hook;
   }
   return workInProgressHook;
 }
 
+// 核心职责：
+// 1. 令 currentHook 和 workInProgressHook 指针后移
+// 2. 基于双缓冲，将 current.memoizedState 按顺序克隆到 workInProgress.memoizedState
+// 3. 克隆过程中，hook.memoized 没变，因此 Hook 对象的内部状态被完全复用
 function updateWorkInProgressHook(): Hook {
   // This function is used both for updates and for re-renders triggered by a
   // render phase update. It assumes there is either a current hook we can
   // clone, or a work-in-progress hook from a previous render pass that we can
   // use as a base. When we reach the end of the base list, we must switch to
   // the dispatcher used for mounts.
+  // 该函数用于更新和渲染阶段更新出发的 re-render
+  // 该函数会假定有一个 current hook 可以去克隆，或者一个从之前渲染阶段传递的 workInProgress hook 可作为基准
+  // 当到达 Hook 链表尾端后，会选择用于挂载的 dispatcher
+
+  // 移动 currentHook 指针
   let nextCurrentHook: null | Hook;
   if (currentHook === null) {
     const current = currentlyRenderingFiber.alternate;
@@ -663,9 +691,10 @@ function updateWorkInProgressHook(): Hook {
       nextCurrentHook = null;
     }
   } else {
-    nextCurrentHook = currentHook.next;
+    nextCurrentHook = currentHook.next; // 通过 next 属性找到下一个 Hook 对象
   }
 
+  // 移动 workInProgressHook 指针
   let nextWorkInProgressHook: null | Hook;
   if (workInProgressHook === null) {
     nextWorkInProgressHook = currentlyRenderingFiber.memoizedState;
@@ -688,6 +717,7 @@ function updateWorkInProgressHook(): Hook {
 
     currentHook = nextCurrentHook;
 
+    // 克隆 currentHook 作为新的 workInProgressHook
     const newHook: Hook = {
       memoizedState: currentHook.memoizedState,
 

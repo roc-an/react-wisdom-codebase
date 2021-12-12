@@ -695,6 +695,8 @@ function constructClassInstance(
     // If new component APIs are defined, "unsafe" lifecycles won't be called.
     // Warn about these lifecycles if they are present.
     // Don't warn about react-lifecycles-compat polyfilled methods though.
+    // 如果定义了新的组件 API，那么 “unsafe” 生命周期将不会被调用
+    // 这种情况下，要对那些定义了的不安全的生命周期做警告
     if (
       typeof ctor.getDerivedStateFromProps === 'function' ||
       typeof instance.getSnapshotBeforeUpdate === 'function'

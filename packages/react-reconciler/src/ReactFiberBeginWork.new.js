@@ -953,6 +953,7 @@ function markRef(current: Fiber | null, workInProgress: Fiber) {
   }
 }
 
+// 更新函数组件
 function updateFunctionComponent(
   current,
   workInProgress,
@@ -1021,6 +1022,7 @@ function updateFunctionComponent(
     }
     setIsRendering(false);
   } else {
+    // 进入 Hooks 处理逻辑，返回下级 ReactElement 对象（这里是 Fiber 与 Hooks 相关联的地方）
     nextChildren = renderWithHooks(
       current,
       workInProgress,
@@ -1046,7 +1048,9 @@ function updateFunctionComponent(
 
   // React DevTools reads this flag.
   workInProgress.flags |= PerformedWork;
+  // 生成下级 Fiber 节点
   reconcileChildren(current, workInProgress, nextChildren, renderLanes);
+  // 返回下级 Fiber 节点
   return workInProgress.child;
 }
 

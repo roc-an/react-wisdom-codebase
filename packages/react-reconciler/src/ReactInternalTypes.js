@@ -142,11 +142,12 @@ export type Fiber = {|
   // pendingProps: 即将下一次更新前，节点的新 props
   // 也就是从 ReactElement 传入的 props，和 memoizedProps 比较可以判断出 props 是否改变
   pendingProps: any, // This type will be more specific once we overload the tag.
-  // memoizedProps: 上一次更新结束后，节点的 props
+  // 上一次生成子节点时用到的属性（生成子节点前是 pendingProps，生成子节点后将 pendingProps 赋给 memoizedProps）
   memoizedProps: any, // The props used to create the output.
 
   // A queue of state updates and callbacks.
   // 该 Fiber 对应的组件通过 setState 等触发了更新后，更新及其回调会存在该 Fiber 的 updateQueue 中
+  // 每一次发起更新，都需要在该队列上创建一个 update 对象
   updateQueue: mixed,
 
   // The state used to create the output

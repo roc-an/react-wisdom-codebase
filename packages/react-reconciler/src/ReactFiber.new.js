@@ -140,6 +140,7 @@ function FiberNode(
   this.ref = null;
 
   // 作为工作单元的属性，存着本次更新的信息
+  // Fiber 节点自身状态相关，仅用于“Fiber 树构造”阶段，直接影响子节点的生成
   this.pendingProps = pendingProps;
   this.memoizedProps = null;
   this.updateQueue = null;
