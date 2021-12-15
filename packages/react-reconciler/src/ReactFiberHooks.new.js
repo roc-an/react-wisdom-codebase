@@ -677,7 +677,7 @@ function updateWorkInProgressHook(): Hook {
   // clone, or a work-in-progress hook from a previous render pass that we can
   // use as a base. When we reach the end of the base list, we must switch to
   // the dispatcher used for mounts.
-  // 该函数用于更新和渲染阶段更新出发的 re-render
+  // 该函数用于更新和渲染阶段更新触发的 re-render
   // 该函数会假定有一个 current hook 可以去克隆，或者一个从之前渲染阶段传递的 workInProgress hook 可作为基准
   // 当到达 Hook 链表尾端后，会选择用于挂载的 dispatcher
 
@@ -751,25 +751,29 @@ function basicStateReducer<S>(state: S, action: BasicStateAction<S>): S {
   return typeof action === 'function' ? action(state) : action;
 }
 
+// 对应 useReducer
 function mountReducer<S, I, A>(
   reducer: (S, A) => S,
   initialArg: I,
-  init?: I => S,
+  init?: I => S, // 用于惰性初始化 state，初始的 state 将被设置为 init(initialArg)
 ): [S, Dispatch<A>] {
+  // 创建 Hook 对象，并挂载到 Fiber 的 memoizedState 字段上，以链表形式存储
   const hook = mountWorkInProgressHook();
   let initialState;
+  // 如果传了 init 函数，那么进行惰性初始化 state，否则初始 state 就是 initialArg
   if (init !== undefined) {
     initialState = init(initialArg);
   } else {
     initialState = ((initialArg: any): S);
   }
+  // 初始化 Hook 对象的属性
   hook.memoizedState = hook.baseState = initialState;
   const queue: UpdateQueue<S, A> = {
     pending: null,
     interleaved: null,
     lanes: NoLanes,
     dispatch: null,
-    lastRenderedReducer: reducer,
+    lastRenderedReducer: reducer, // 这里使用的是应用层自定义 reducer
     lastRenderedState: (initialState: any),
   };
   hook.queue = queue;
@@ -778,6 +782,7 @@ function mountReducer<S, I, A>(
     currentlyRenderingFiber,
     queue,
   ): any));
+  // 返回 [当前状态, dispatch 函数]
   return [hook.memoizedState, dispatch];
 }
 
@@ -1526,20 +1531,29 @@ function forceStoreRerender(fiber) {
   scheduleUpdateOnFiber(fiber, SyncLane, NoTimestamp);
 }
 
+// 对应 useState
+// useState 就是对 useReducer 的封装，内置了一个特殊的 reducer，也就是 basicStateReducer
 function mountState<S>(
   initialState: (() => S) | S,
 ): [S, Dispatch<BasicStateAction<S>>] {
+  // 创建 Hook 对象，单链表形式挂到 currentlyRenderingFiber 的 memoizedState 上，得到 workInProgressHook
   const hook = mountWorkInProgressHook();
+  // 如果 initialState 是个函数，那么执行它得到 initialState
   if (typeof initialState === 'function') {
     // $FlowFixMe: Flow doesn't like mixed types
     initialState = initialState();
   }
+  // 初始化 Hook 属性
+  // hook.memoizedState: 当前状态
+  // hook.baseState: 基础状态，作为合并 hook.baseQueue 的初始值
   hook.memoizedState = hook.baseState = initialState;
   const queue: UpdateQueue<S, BasicStateAction<S>> = {
     pending: null,
     interleaved: null,
     lanes: NoLanes,
     dispatch: null,
+    // 这里使用的是内置的 basicStateReducer，而 mountReducer 在这里使用的是应用层自定义的 reducer
+    // 因此可以认为，mountState 是 mountReducer 的一种特殊情况
     lastRenderedReducer: basicStateReducer,
     lastRenderedState: (initialState: any),
   };
@@ -1551,6 +1565,7 @@ function mountState<S>(
     currentlyRenderingFiber,
     queue,
   ): any));
+  // 返回 [当前状态, dispatch 函数]
   return [hook.memoizedState, dispatch];
 }
 
@@ -2172,8 +2187,9 @@ function dispatchReducerAction<S, A>(
 
   const lane = requestUpdateLane(fiber);
 
+  // 创建 update 对象
   const update: Update<S, A> = {
-    lane,
+    lane, // update 优先级
     action,
     hasEagerState: false,
     eagerState: null,
@@ -2211,6 +2227,7 @@ function dispatchSetState<S, A>(
 
   const lane = requestUpdateLane(fiber);
 
+  // 创建 update 对象
   const update: Update<S, A> = {
     lane,
     action,
@@ -2220,6 +2237,7 @@ function dispatchSetState<S, A>(
   };
 
   if (isRenderPhaseUpdate(fiber)) {
+    // 将 update 推入 hook.queue.pending 队列中
     enqueueRenderPhaseUpdate(queue, update);
   } else {
     enqueueUpdate(fiber, queue, update, lane);
@@ -2265,6 +2283,7 @@ function dispatchSetState<S, A>(
       }
     }
     const eventTime = requestEventTime();
+    // 发起调度更新, 进入 Reconciler 运作流程中的输入阶段
     const root = scheduleUpdateOnFiber(fiber, lane, eventTime);
     if (root !== null) {
       entangleTransitionUpdate(root, queue, lane);
@@ -2274,14 +2293,17 @@ function dispatchSetState<S, A>(
   markUpdateInDevTools(fiber, lane, action);
 }
 
+// 判断是否是渲染阶段的更新
 function isRenderPhaseUpdate(fiber: Fiber) {
   const alternate = fiber.alternate;
+  // 如果传参 fiber 或其 alternate 是 currentlyRenderingFiber，则 return true
   return (
     fiber === currentlyRenderingFiber ||
     (alternate !== null && alternate === currentlyRenderingFiber)
   );
 }
 
+// 将 update 推入 hook.queue.pending 队列中
 function enqueueRenderPhaseUpdate<S, A>(
   queue: UpdateQueue<S, A>,
   update: Update<S, A>,
@@ -2289,10 +2311,12 @@ function enqueueRenderPhaseUpdate<S, A>(
   // This is a render phase update. Stash it in a lazily-created map of
   // queue -> linked list of updates. After this render pass, we'll restart
   // and apply the stashed updates on top of the work-in-progress hook.
-  didScheduleRenderPhaseUpdateDuringThisPass = didScheduleRenderPhaseUpdate = true;
+  // 这是一个渲染阶段的更新。
+  didScheduleRenderPhaseUpdateDuringThisPass = didScheduleRenderPhaseUpdate = true; // 渲染时更新，做好全局标记
   const pending = queue.pending;
   if (pending === null) {
     // This is the first update. Create a circular list.
+    // 这是首个更新，创建一个环形链表
     update.next = update;
   } else {
     update.next = pending.next;
